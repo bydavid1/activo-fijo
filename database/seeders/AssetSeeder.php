@@ -2,19 +2,19 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Assets\Models\AssetCategory;
 use App\Modules\Assets\Models\AssetLocation;
-use App\Modules\Assets\Models\Supplier;
+use App\Modules\Employees\Models\Employee;
+use App\Modules\Suppliers\Models\Supplier;
 use Illuminate\Database\Seeder;
 
 class AssetSeeder extends Seeder
 {
     public function run(): void
     {
-        // Obtener un usuario responsable
-        $adminUser = User::first(); // El usuario creado por el seeder
+        // Obtener un empleado responsable (custodio)
+        $empleado = Employee::first();
 
         $assets = [
             [
@@ -27,7 +27,7 @@ class AssetSeeder extends Seeder
                 'categoria_id' => AssetCategory::where('codigo', 'COMP')->first()->id,
                 'ubicacion_id' => AssetLocation::where('codigo', 'OFC-001')->first()->id,
                 'proveedor_id' => Supplier::where('codigo', 'TECH-001')->first()->id,
-                'responsable_id' => $adminUser->id,
+                'responsable_id' => $empleado->id,
                 'valor_compra' => 3500000,
                 'valor_residual' => 350000,
                 'vida_util_anos' => 5,
@@ -44,7 +44,7 @@ class AssetSeeder extends Seeder
                 'categoria_id' => AssetCategory::where('codigo', 'COMP')->first()->id,
                 'ubicacion_id' => AssetLocation::where('codigo', 'OFC-001')->first()->id,
                 'proveedor_id' => Supplier::where('codigo', 'TECH-001')->first()->id,
-                'responsable_id' => $adminUser->id,
+                'responsable_id' => $empleado->id,
                 'valor_compra' => 2800000,
                 'valor_residual' => 280000,
                 'vida_util_anos' => 4,
@@ -61,7 +61,7 @@ class AssetSeeder extends Seeder
                 'categoria_id' => AssetCategory::where('codigo', 'VEH')->first()->id,
                 'ubicacion_id' => AssetLocation::where('codigo', 'PAR-001')->first()->id,
                 'proveedor_id' => Supplier::where('codigo', 'TECH-001')->first()->id,
-                'responsable_id' => $adminUser->id,
+                'responsable_id' => $empleado->id,
                 'valor_compra' => 85000000,
                 'valor_residual' => 25500000,
                 'vida_util_anos' => 10,
@@ -78,7 +78,7 @@ class AssetSeeder extends Seeder
                 'categoria_id' => AssetCategory::where('codigo', 'OFIC')->first()->id,
                 'ubicacion_id' => AssetLocation::where('codigo', 'OFC-001')->first()->id,
                 'proveedor_id' => Supplier::where('codigo', 'MOB-001')->first()->id,
-                'responsable_id' => $adminUser->id,
+                'responsable_id' => $empleado->id,
                 'valor_compra' => 2500000,
                 'valor_residual' => 500000,
                 'vida_util_anos' => 10,
@@ -95,7 +95,7 @@ class AssetSeeder extends Seeder
                 'categoria_id' => AssetCategory::where('codigo', 'HERB')->first()->id,
                 'ubicacion_id' => AssetLocation::where('codigo', 'TAL-001')->first()->id,
                 'proveedor_id' => Supplier::where('codigo', 'HERB-001')->first()->id,
-                'responsable_id' => $adminUser->id,
+                'responsable_id' => $empleado->id,
                 'valor_compra' => 450000,
                 'valor_residual' => 45000,
                 'vida_util_anos' => 5,
@@ -112,7 +112,7 @@ class AssetSeeder extends Seeder
                 'categoria_id' => AssetCategory::where('codigo', 'ELEC')->first()->id,
                 'ubicacion_id' => AssetLocation::where('codigo', 'OFC-002')->first()->id,
                 'proveedor_id' => Supplier::where('codigo', 'TECH-001')->first()->id,
-                'responsable_id' => $adminUser->id,
+                'responsable_id' => $empleado->id,
                 'valor_compra' => 1800000,
                 'valor_residual' => 180000,
                 'vida_util_anos' => 5,
@@ -129,7 +129,7 @@ class AssetSeeder extends Seeder
                 'categoria_id' => AssetCategory::where('codigo', 'ELEC')->first()->id,
                 'ubicacion_id' => AssetLocation::where('codigo', 'SER-001')->first()->id,
                 'proveedor_id' => Supplier::where('codigo', 'TECH-001')->first()->id,
-                'responsable_id' => $adminUser->id,
+                'responsable_id' => $empleado->id,
                 'valor_compra' => 25000000,
                 'valor_residual' => 2500000,
                 'vida_util_anos' => 5,
@@ -146,7 +146,7 @@ class AssetSeeder extends Seeder
                 'categoria_id' => AssetCategory::where('codigo', 'OFIC')->first()->id,
                 'ubicacion_id' => AssetLocation::where('codigo', 'OFC-001')->first()->id,
                 'proveedor_id' => Supplier::where('codigo', 'MOB-001')->first()->id,
-                'responsable_id' => $adminUser->id,
+                'responsable_id' => $empleado->id,
                 'valor_compra' => 800000,
                 'valor_residual' => 80000,
                 'vida_util_anos' => 10,

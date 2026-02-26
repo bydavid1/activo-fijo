@@ -19,10 +19,12 @@ class AssetMovement extends Model
         'responsable_nuevo_id',
         'tipo',
         'motivo',
+        'fecha_devolucion_esperada',
         'usuario_id',
     ];
 
     protected $casts = [
+        'fecha_devolucion_esperada' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -45,12 +47,12 @@ class AssetMovement extends Model
 
     public function responsableAnterior()
     {
-        return $this->belongsTo(\App\Models\User::class, 'responsable_anterior_id');
+        return $this->belongsTo(\App\Modules\Employees\Models\Employee::class, 'responsable_anterior_id');
     }
 
     public function responsableNuevo()
     {
-        return $this->belongsTo(\App\Models\User::class, 'responsable_nuevo_id');
+        return $this->belongsTo(\App\Modules\Employees\Models\Employee::class, 'responsable_nuevo_id');
     }
 
     public function usuario()

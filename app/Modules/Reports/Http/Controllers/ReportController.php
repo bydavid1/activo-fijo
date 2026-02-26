@@ -5,6 +5,7 @@ namespace App\Modules\Reports\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Assets\Models\AssetDepreciation;
+use App\Modules\Assets\Models\AssetMovement;
 use App\Modules\Maintenance\Models\MaintenanceOrder;
 use App\Modules\Inventory\Models\InventoryDiscrepancy;
 use Illuminate\Http\Request;
@@ -125,7 +126,7 @@ class ReportController extends Controller
 
                     return [
                         'responsable_id' => $items->first()->responsable_id,
-                        'responsable' => $responsable?->name ?? 'Sin asignar',
+                        'responsable' => $responsable?->nombre ?? 'Sin asignar',
                         'cantidad_activos' => $items->count(),
                         'valor_total_compra' => $items->sum('valor_compra'),
                         'valor_total_libros' => $ultimasDepreciaciones->sum(),
@@ -251,6 +252,112 @@ class ReportController extends Controller
                 'total_ordenes' => $ordenes->count(),
                 'resumen' => $resumen,
                 'datos' => $ordenes,
+            ]);
+        });
+    }
+
+    /**
+     * Reporte de bajas y adquisiciones del periodo
+     */
+    public function dispositionsAndAcquisitions(Request $request)
+    {
+        $cacheKey = 'report_disp_acq_' . md5(json_encode($request->query()));
+
+        return Cache::remember($cacheKey, 3600, function () use ($request) {
+            $fechaDesde = $request->get('fecha_desde', now()->startOfYear()->toDateString());
+            $fechaHasta = $request->get('fecha_hasta', now()->toDateString());
+
+            // Adquisiciones: activos con fecha_adquisicion en el rango
+            $adquisiciones = Asset::with(['categoria', 'ubicacion', 'proveedor'])
+                ->whereBetween('fecha_adquisicion', [$fechaDesde, $fechaHasta])
+                ->get()
+                ->map(function ($asset) {
+                    return [
+                        'id' => $asset->id,
+                        'codigo' => $asset->codigo,
+                        'nombre' => $asset->nombre,
+                        'categoria' => $asset->categoria?->nombre,
+                        'fecha_adquisicion' => $asset->fecha_adquisicion,
+                        'valor_compra' => $asset->valor_compra,
+                        'proveedor' => $asset->proveedor?->nombre,
+                    ];
+                });
+
+            // Bajas: movimientos tipo 'baja' en el rango
+            $bajas = AssetMovement::with(['asset.categoria'])
+                ->where('tipo', 'baja')
+                ->whereBetween('created_at', [$fechaDesde, $fechaHasta . ' 23:59:59'])
+                ->get()
+                ->map(function ($mov) {
+                    $depreciacion = AssetDepreciation::where('asset_id', $mov->asset_id)
+                        ->latest('periodo')->first();
+                    return [
+                        'id' => $mov->asset->id,
+                        'codigo' => $mov->asset->codigo,
+                        'nombre' => $mov->asset->nombre,
+                        'categoria' => $mov->asset->categoria?->nombre,
+                        'fecha_baja' => $mov->created_at,
+                        'valor_compra' => $mov->asset->valor_compra,
+                        'valor_en_libros' => $depreciacion?->valor_en_libros ?? $mov->asset->valor_compra,
+                        'motivo' => $mov->motivo,
+                    ];
+                });
+
+            return response()->json([
+                'titulo' => 'Reporte de Bajas y Adquisiciones',
+                'fecha_generacion' => now(),
+                'periodo' => ['desde' => $fechaDesde, 'hasta' => $fechaHasta],
+                'resumen' => [
+                    'total_adquisiciones' => $adquisiciones->count(),
+                    'valor_adquirido' => $adquisiciones->sum('valor_compra'),
+                    'total_bajas' => $bajas->count(),
+                    'valor_dado_baja' => $bajas->sum('valor_compra'),
+                ],
+                'adquisiciones' => $adquisiciones,
+                'bajas' => $bajas,
+            ]);
+        });
+    }
+
+    /**
+     * Reporte de valor en libros por ubicación
+     */
+    public function valueByLocation(Request $request)
+    {
+        $cacheKey = 'report_value_location_' . md5(json_encode($request->query()));
+
+        return Cache::remember($cacheKey, 3600, function () use ($request) {
+            $query = Asset::with('ubicacion');
+
+            if ($request->has('ubicacion_id')) {
+                $query->where('ubicacion_id', $request->ubicacion_id);
+            }
+
+            $activos = $query->get()
+                ->groupBy('ubicacion_id')
+                ->map(function ($items) {
+                    $ubicacion = $items->first()->ubicacion;
+                    $valorEnLibros = $items->map(function ($asset) {
+                        $depreciacion = AssetDepreciation::where('asset_id', $asset->id)
+                            ->latest('periodo')->first();
+                        return $depreciacion?->valor_en_libros ?? $asset->valor_compra;
+                    })->sum();
+
+                    return [
+                        'ubicacion_id' => $items->first()->ubicacion_id,
+                        'ubicacion' => $ubicacion?->nombre ?? 'Sin asignar',
+                        'codigo_ubicacion' => $ubicacion?->codigo,
+                        'cantidad_activos' => $items->count(),
+                        'valor_total_compra' => $items->sum('valor_compra'),
+                        'valor_total_libros' => $valorEnLibros,
+                    ];
+                })
+                ->values();
+
+            return response()->json([
+                'titulo' => 'Reporte de Valor por Ubicación',
+                'fecha_generacion' => now(),
+                'datos' => $activos,
             ]);
         });
     }

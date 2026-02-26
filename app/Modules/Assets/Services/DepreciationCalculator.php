@@ -6,6 +6,8 @@ use App\Modules\Assets\Contracts\DepreciationMethod;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Assets\Models\AssetDepreciation;
 use App\Modules\Assets\Services\Depreciation\LinearDepreciation;
+use App\Modules\Assets\Services\Depreciation\AcceleratedDepreciation;
+use App\Modules\Assets\Services\Depreciation\UnitsOfProductionDepreciation;
 
 class DepreciationCalculator
 {
@@ -26,22 +28,41 @@ class DepreciationCalculator
     }
 
     /**
+     * Resolver el método de depreciación correcto para un activo
+     */
+    public function resolveMethod(Asset $asset): DepreciationMethod
+    {
+        // Prioridad: activo → categoría → lineal por defecto
+        $metodo = $asset->metodo_depreciacion
+            ?? $asset->categoria?->metodo_depreciacion
+            ?? 'lineal';
+
+        return match ($metodo) {
+            'acelerada' => new AcceleratedDepreciation(),
+            'unidades_producidas' => new UnitsOfProductionDepreciation(),
+            default => new LinearDepreciation(),
+        };
+    }
+
+    /**
      * Calcular depreciación para un activo
      */
     public function calculateForAsset(Asset $asset): array
     {
-        $vidaUtil = $asset->vida_util_anos ?? 5; // por defecto 5 años
+        // Resolver método automáticamente desde el activo
+        $method = $this->resolveMethod($asset);
+
+        $vidaUtil = $asset->vida_util_anos ?? 5;
         $valorCompra = $asset->valor_compra;
         $valorResidual = $asset->valor_residual ?? 0;
 
-        $depreciacionAnual = $this->method->calculate($valorCompra, $valorResidual, $vidaUtil, 1);
         $depreciacionAcumulada = 0;
         $valorEnLibros = $valorCompra;
-
         $depreciaciones = [];
 
         for ($periodo = 1; $periodo <= $vidaUtil; $periodo++) {
-            $depreciacionAcumulada += $depreciacionAnual;
+            $depreciacionPeriodo = $method->calculate($valorCompra, $valorResidual, $vidaUtil, $periodo);
+            $depreciacionAcumulada += $depreciacionPeriodo;
             $valorEnLibros = $valorCompra - $depreciacionAcumulada;
 
             // Asegurar que no sea menor que el valor residual
@@ -52,7 +73,7 @@ class DepreciationCalculator
 
             $depreciaciones[$periodo] = [
                 'periodo' => $periodo,
-                'depreciacion_valor' => round($depreciacionAnual, 2),
+                'depreciacion_valor' => round($depreciacionPeriodo, 2),
                 'depreciacion_acumulada' => round($depreciacionAcumulada, 2),
                 'valor_en_libros' => round($valorEnLibros, 2),
             ];

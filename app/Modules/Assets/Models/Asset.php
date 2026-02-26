@@ -27,6 +27,7 @@ class Asset extends Model
         'valor_residual',
         'vida_util_anos',
         'fecha_adquisicion',
+        'metodo_depreciacion',
         'estado',
     ];
 
@@ -57,7 +58,7 @@ class Asset extends Model
 
     public function responsable()
     {
-        return $this->belongsTo(\App\Models\User::class, 'responsable_id');
+        return $this->belongsTo(\App\Modules\Employees\Models\Employee::class, 'responsable_id');
     }
 
     public function movimientos(): HasMany
@@ -96,8 +97,8 @@ class Asset extends Model
         return $query->where('categoria_id', $categoryId);
     }
 
-    public function scopeByResponsible($query, $userId)
+    public function scopeByResponsible($query, $employeeId)
     {
-        return $query->where('responsable_id', $userId);
+        return $query->where('responsable_id', $employeeId);
     }
 }

@@ -58,6 +58,40 @@ Route::prefix('employees')->middleware('auth')->name('employees.')->group(functi
     })->name('create');
 });
 
+// ==================== MOVEMENTS ====================
+Route::prefix('movements')->middleware('auth')->name('movements.')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('Movements/Index', [
+            'user' => auth()->user(),
+        ]);
+    })->name('index');
+});
+
+// ==================== ADMINISTRATION ====================
+Route::prefix('categories')->middleware('auth')->name('categories.')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('Categories/Index', [
+            'user' => auth()->user(),
+        ]);
+    })->name('index');
+});
+
+Route::prefix('locations')->middleware('auth')->name('locations.')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('Locations/Index', [
+            'user' => auth()->user(),
+        ]);
+    })->name('index');
+});
+
+Route::prefix('suppliers')->middleware('auth')->name('suppliers.')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('Suppliers/Index', [
+            'user' => auth()->user(),
+        ]);
+    })->name('index');
+});
+
 // ==================== INVENTORY ====================
 Route::prefix('inventory')->middleware('auth')->name('inventory.')->group(function () {
     Route::get('/', function () {

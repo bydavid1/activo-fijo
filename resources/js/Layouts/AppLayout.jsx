@@ -25,6 +25,11 @@ export default function AppLayout({ children, user }) {
             ]
         },
         {
+            label: 'Movimientos',
+            icon: 'pi pi-fw pi-arrow-right-arrow-left',
+            command: () => window.location.href = '/movements',
+        },
+        {
             label: 'Empleados',
             icon: 'pi pi-fw pi-users',
             command: () => window.location.href = '/employees',
@@ -38,6 +43,15 @@ export default function AppLayout({ children, user }) {
             label: 'Mantenimiento',
             icon: 'pi pi-fw pi-wrench',
             command: () => window.location.href = '/maintenance',
+        },
+        {
+            label: 'Administración',
+            icon: 'pi pi-fw pi-cog',
+            items: [
+                { label: 'Categorías', command: () => window.location.href = '/categories' },
+                { label: 'Ubicaciones', command: () => window.location.href = '/locations' },
+                { label: 'Proveedores', command: () => window.location.href = '/suppliers' },
+            ]
         },
         {
             label: 'Reportes',

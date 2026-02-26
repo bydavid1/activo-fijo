@@ -20,6 +20,8 @@ const Reports = ({ user }) => {
         { label: 'Lista de Activos', value: 'asset-list' },
         { label: 'Depreciación', value: 'depreciation' },
         { label: 'Valor por Responsable', value: 'value-responsible' },
+        { label: 'Valor por Ubicación', value: 'value-location' },
+        { label: 'Bajas y Adquisiciones', value: 'dispositions-acquisitions' },
         { label: 'Movimientos', value: 'movements' },
         { label: 'Discrepancias', value: 'discrepancies' },
         { label: 'Mantenimiento', value: 'maintenance' },
@@ -194,6 +196,101 @@ const Reports = ({ user }) => {
                         />
                         <Column field="estado" header="Estado" />
                     </DataTable>
+                );
+
+            case 'value-location':
+                return (
+                    <div>
+                        <div className="mb-6">
+                            <ResponsiveContainer width="100%" height={400}>
+                                <BarChart data={reportData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="ubicacion" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="valor_total" fill="#6366f1" name="Valor Total" />
+                                    <Bar dataKey="valor_en_libros" fill="#22c55e" name="Valor en Libros" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <DataTable value={reportData} className="w-full">
+                            <Column field="ubicacion" header="Ubicación" sortable />
+                            <Column field="cantidad_activos" header="Cantidad" sortable />
+                            <Column
+                                field="valor_total"
+                                header="Valor Total"
+                                body={(rowData) => `$${rowData.valor_total?.toLocaleString('es-CO') || 0}`}
+                                sortable
+                            />
+                            <Column
+                                field="valor_en_libros"
+                                header="Valor en Libros"
+                                body={(rowData) => `$${rowData.valor_en_libros?.toLocaleString('es-CO') || 0}`}
+                                sortable
+                            />
+                        </DataTable>
+                    </div>
+                );
+
+            case 'dispositions-acquisitions':
+                return (
+                    <div>
+                        {reportData.resumen && (
+                            <div className="grid grid-cols-4 gap-4 mb-6">
+                                <Card className="bg-blue-50">
+                                    <p className="text-sm text-gray-600">Adquisiciones</p>
+                                    <p className="text-2xl font-bold text-blue-700">{reportData.resumen.total_adquisiciones || 0}</p>
+                                </Card>
+                                <Card className="bg-green-50">
+                                    <p className="text-sm text-gray-600">Valor Adquirido</p>
+                                    <p className="text-2xl font-bold text-green-700">${reportData.resumen.valor_adquisiciones?.toLocaleString('es-CO') || 0}</p>
+                                </Card>
+                                <Card className="bg-red-50">
+                                    <p className="text-sm text-gray-600">Bajas</p>
+                                    <p className="text-2xl font-bold text-red-700">{reportData.resumen.total_bajas || 0}</p>
+                                </Card>
+                                <Card className="bg-orange-50">
+                                    <p className="text-sm text-gray-600">Valor Bajas</p>
+                                    <p className="text-2xl font-bold text-orange-700">${reportData.resumen.valor_bajas?.toLocaleString('es-CO') || 0}</p>
+                                </Card>
+                            </div>
+                        )}
+                        {reportData.adquisiciones && reportData.adquisiciones.length > 0 && (
+                            <div className="mb-6">
+                                <h6 className="text-lg font-semibold mb-3">Adquisiciones</h6>
+                                <DataTable value={reportData.adquisiciones} className="w-full" paginator rows={5}>
+                                    <Column field="codigo" header="Código" />
+                                    <Column field="nombre" header="Nombre" />
+                                    <Column
+                                        field="valor_compra"
+                                        header="Valor"
+                                        body={(rowData) => `$${rowData.valor_compra?.toLocaleString('es-CO') || 0}`}
+                                    />
+                                    <Column
+                                        field="fecha_adquisicion"
+                                        header="Fecha"
+                                        body={(rowData) => new Date(rowData.fecha_adquisicion).toLocaleDateString('es-CO')}
+                                    />
+                                </DataTable>
+                            </div>
+                        )}
+                        {reportData.bajas && reportData.bajas.length > 0 && (
+                            <div>
+                                <h6 className="text-lg font-semibold mb-3">Bajas</h6>
+                                <DataTable value={reportData.bajas} className="w-full" paginator rows={5}>
+                                    <Column field="asset_codigo" header="Código" body={(r) => r.asset?.codigo || '-'} />
+                                    <Column field="asset_nombre" header="Nombre" body={(r) => r.asset?.nombre || '-'} />
+                                    <Column field="observaciones" header="Motivo" />
+                                    <Column
+                                        field="fecha_movimiento"
+                                        header="Fecha"
+                                        body={(rowData) => new Date(rowData.fecha_movimiento).toLocaleDateString('es-CO')}
+                                    />
+                                </DataTable>
+                            </div>
+                        )}
+                    </div>
                 );
 
             default:
