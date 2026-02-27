@@ -48,6 +48,7 @@ export default function AppLayout({ children, user }) {
             label: 'Administración',
             icon: 'pi pi-fw pi-cog',
             items: [
+                { label: 'Tipos de Bien', command: () => window.location.href = '/asset-types' },
                 { label: 'Categorías', command: () => window.location.href = '/categories' },
                 { label: 'Ubicaciones', command: () => window.location.href = '/locations' },
                 { label: 'Proveedores', command: () => window.location.href = '/suppliers' },

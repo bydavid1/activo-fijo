@@ -19,6 +19,7 @@ class Asset extends Model
         'marca',
         'modelo',
         'serie',
+        'asset_type_id',
         'categoria_id',
         'ubicacion_id',
         'proveedor_id',
@@ -41,6 +42,16 @@ class Asset extends Model
     ];
 
     // Relaciones
+    public function tipoBien()
+    {
+        return $this->belongsTo(AssetType::class, 'asset_type_id');
+    }
+
+    public function customValues()
+    {
+        return $this->hasMany(AssetCustomValue::class, 'asset_id');
+    }
+
     public function categoria()
     {
         return $this->belongsTo(AssetCategory::class, 'categoria_id');

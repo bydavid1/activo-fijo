@@ -8,6 +8,9 @@ import { Dropdown } from 'primereact/dropdown';
 import { Dialog } from 'primereact/dialog';
 import { InputNumber } from 'primereact/inputnumber';
 import { Calendar } from 'primereact/calendar';
+import { InputSwitch } from 'primereact/inputswitch';
+import { InputTextarea } from 'primereact/inputtextarea';
+import { Divider } from 'primereact/divider';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
@@ -24,6 +27,8 @@ const Assets = ({ user }) => {
     const [suppliers, setSuppliers] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [depreciationMethods, setDepreciationMethods] = useState([]);
+    const [tiposBien, setTiposBien] = useState([]);
+    const [selectedTypeProps, setSelectedTypeProps] = useState([]);
     const toast = useRef(null);
 
     // Dispose dialog state
@@ -63,6 +68,7 @@ const Assets = ({ user }) => {
         marca: '',
         modelo: '',
         serie: '',
+        asset_type_id: null,
         categoria_id: null,
         ubicacion_id: null,
         proveedor_id: null,
@@ -73,6 +79,7 @@ const Assets = ({ user }) => {
         vida_util_anos: 5,
         fecha_adquisicion: new Date(),
         estado: 'activo',
+        custom_values: {},
     });
 
     useEffect(() => {
@@ -100,20 +107,62 @@ const Assets = ({ user }) => {
             setSuppliers((data.proveedores || []).map(s => ({ label: s.nombre, value: s.id })));
             setEmployees((data.empleados || []).map(e => ({ label: e.nombre, value: e.id })));
             setDepreciationMethods((data.metodos_depreciacion || []).map(m => ({ label: m.label, value: m.value })));
+            setTiposBien(data.tipos_bien || []);
         } catch (error) {
             console.error('Error fetching options:', error);
         }
     };
 
+    const handleTypeChange = (typeId) => {
+        const tipo = tiposBien.find(t => t.id === typeId);
+        const props = tipo?.properties || [];
+        setSelectedTypeProps(props);
+
+        const updates = { asset_type_id: typeId, custom_values: {} };
+        // Pre-fill custom_values keys
+        props.forEach(p => { updates.custom_values[p.id] = ''; });
+
+        if (tipo) {
+            if (!tipo.es_depreciable) {
+                updates.vida_util_anos = null;
+                updates.valor_residual = 0;
+                updates.metodo_depreciacion = null;
+            } else if (tipo.vida_util_default) {
+                updates.vida_util_anos = tipo.vida_util_default;
+            }
+        }
+        setFormData(prev => ({ ...prev, ...updates }));
+    };
+
+    const getSelectedTypeIsDepreciable = () => {
+        if (!formData.asset_type_id) return true; // default: show depreciation fields
+        const tipo = tiposBien.find(t => t.id === formData.asset_type_id);
+        return tipo ? tipo.es_depreciable : true;
+    };
+
     const handleOpenDialog = (asset = null) => {
         if (asset) {
             setEditingAsset(asset);
+            // Build custom_values map from existing asset
+            const cv = {};
+            (asset.custom_values || []).forEach(v => {
+                cv[v.asset_type_property_id] = v.valor || '';
+            });
+            // Load type properties
+            const tipo = tiposBien.find(t => t.id === asset.asset_type_id);
+            setSelectedTypeProps(tipo?.properties || []);
+            // Fill any missing property keys
+            (tipo?.properties || []).forEach(p => {
+                if (!(p.id in cv)) cv[p.id] = '';
+            });
             setFormData({
                 ...asset,
                 fecha_adquisicion: asset.fecha_adquisicion ? new Date(asset.fecha_adquisicion) : new Date(),
+                custom_values: cv,
             });
         } else {
             setEditingAsset(null);
+            setSelectedTypeProps([]);
             setFormData({
                 codigo: '',
                 nombre: '',
@@ -121,6 +170,7 @@ const Assets = ({ user }) => {
                 marca: '',
                 modelo: '',
                 serie: '',
+                asset_type_id: null,
                 categoria_id: null,
                 ubicacion_id: null,
                 proveedor_id: null,
@@ -131,6 +181,7 @@ const Assets = ({ user }) => {
                 vida_util_anos: 5,
                 fecha_adquisicion: new Date(),
                 estado: 'activo',
+                custom_values: {},
             });
         }
         setDisplayDialog(true);
@@ -138,8 +189,14 @@ const Assets = ({ user }) => {
 
     const handleSaveAsset = async () => {
         try {
+            // Convert custom_values map to array format
+            const customValuesArray = Object.entries(formData.custom_values || {}).map(([propId, valor]) => ({
+                property_id: parseInt(propId),
+                valor: valor?.toString() || '',
+            }));
             const payload = {
                 ...formData,
+                custom_values: customValuesArray,
                 fecha_adquisicion: formData.fecha_adquisicion instanceof Date
                     ? formData.fecha_adquisicion.toISOString().split('T')[0]
                     : formData.fecha_adquisicion,
@@ -245,6 +302,92 @@ const Assets = ({ user }) => {
         }
     };
 
+    const updateCustomValue = (propId, value) => {
+        setFormData(prev => ({
+            ...prev,
+            custom_values: { ...prev.custom_values, [propId]: value },
+        }));
+    };
+
+    const renderCustomField = (prop) => {
+        const value = formData.custom_values?.[prop.id] ?? '';
+        switch (prop.tipo_dato) {
+            case 'texto':
+                return (
+                    <InputText
+                        value={value}
+                        onChange={(e) => updateCustomValue(prop.id, e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded"
+                    />
+                );
+            case 'numero':
+                return (
+                    <InputNumber
+                        value={value ? parseInt(value) : null}
+                        onValueChange={(e) => updateCustomValue(prop.id, e.value)}
+                        className="w-full"
+                    />
+                );
+            case 'decimal':
+                return (
+                    <InputNumber
+                        value={value ? parseFloat(value) : null}
+                        onValueChange={(e) => updateCustomValue(prop.id, e.value)}
+                        minFractionDigits={2}
+                        maxFractionDigits={4}
+                        className="w-full"
+                    />
+                );
+            case 'fecha':
+                return (
+                    <Calendar
+                        value={value ? new Date(value) : null}
+                        onChange={(e) => updateCustomValue(prop.id, e.value instanceof Date ? e.value.toISOString().split('T')[0] : e.value)}
+                        dateFormat="yy-mm-dd"
+                        showIcon
+                        className="w-full"
+                    />
+                );
+            case 'booleano':
+                return (
+                    <InputSwitch
+                        checked={value === '1' || value === 'true' || value === true}
+                        onChange={(e) => updateCustomValue(prop.id, e.value ? '1' : '0')}
+                    />
+                );
+            case 'seleccion':
+                return (
+                    <Dropdown
+                        value={value}
+                        onChange={(e) => updateCustomValue(prop.id, e.value)}
+                        options={(prop.opciones || []).map(o => ({ label: o, value: o }))}
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Seleccionar"
+                        showClear
+                        className="w-full"
+                    />
+                );
+            case 'textarea':
+                return (
+                    <InputTextarea
+                        value={value}
+                        onChange={(e) => updateCustomValue(prop.id, e.target.value)}
+                        rows={3}
+                        className="w-full p-2 border border-gray-300 rounded"
+                    />
+                );
+            default:
+                return (
+                    <InputText
+                        value={value}
+                        onChange={(e) => updateCustomValue(prop.id, e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded"
+                    />
+                );
+        }
+    };
+
     const actionBodyTemplate = (rowData) => {
         return (
             <div className="flex gap-1">
@@ -326,11 +469,16 @@ const Assets = ({ user }) => {
                     striped
                 >
                     <Column field="codigo" header="Código" sortable style={{ width: '10%' }} />
-                    <Column field="nombre" header="Nombre" sortable style={{ width: '18%' }} />
-                    <Column field="marca" header="Marca" style={{ width: '10%' }} />
+                    <Column field="nombre" header="Nombre" sortable style={{ width: '16%' }} />
+                    <Column field="marca" header="Marca" style={{ width: '8%' }} />
+                    <Column
+                        header="Tipo"
+                        style={{ width: '10%' }}
+                        body={(rowData) => rowData.tipo_bien?.nombre || '-'}
+                    />
                     <Column
                         header="Categoría"
-                        style={{ width: '12%' }}
+                        style={{ width: '10%' }}
                         body={(rowData) => rowData.categoria?.nombre || '-'}
                     />
                     <Column
@@ -434,6 +582,20 @@ const Assets = ({ user }) => {
                         />
                     </div>
                     <div>
+                        <label className="block text-sm font-semibold mb-2">Tipo de Bien</label>
+                        <Dropdown
+                            value={formData.asset_type_id}
+                            onChange={(e) => handleTypeChange(e.value)}
+                            options={tiposBien.map(t => ({ label: t.nombre, value: t.id }))}
+                            optionLabel="label"
+                            optionValue="value"
+                            filter
+                            showClear
+                            placeholder="Seleccionar tipo"
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
                         <label className="block text-sm font-semibold mb-2">Categoría</label>
                         <Dropdown
                             value={formData.categoria_id}
@@ -496,6 +658,7 @@ const Assets = ({ user }) => {
                             placeholder="Usar el de categoría"
                             showClear
                             className="w-full"
+                            disabled={!getSelectedTypeIsDepreciable()}
                         />
                     </div>
                     <div>
@@ -524,27 +687,52 @@ const Assets = ({ user }) => {
                             className="w-full"
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-semibold mb-2">Valor Residual</label>
-                        <InputNumber
-                            value={formData.valor_residual}
-                            onValueChange={(e) => setFormData({ ...formData, valor_residual: e.value })}
-                            mode="currency"
-                            currency="COP"
-                            locale="es-CO"
-                            className="w-full"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold mb-2">Vida Útil (años)</label>
-                        <InputNumber
-                            value={formData.vida_util_anos}
-                            onValueChange={(e) => setFormData({ ...formData, vida_util_anos: e.value })}
-                            min={1}
-                            max={100}
-                            className="w-full"
-                        />
-                    </div>
+                    {getSelectedTypeIsDepreciable() && (
+                        <>
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">Valor Residual</label>
+                                <InputNumber
+                                    value={formData.valor_residual}
+                                    onValueChange={(e) => setFormData({ ...formData, valor_residual: e.value })}
+                                    mode="currency"
+                                    currency="COP"
+                                    locale="es-CO"
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold mb-2">Vida Útil (años)</label>
+                                <InputNumber
+                                    value={formData.vida_util_anos}
+                                    onValueChange={(e) => setFormData({ ...formData, vida_util_anos: e.value })}
+                                    min={1}
+                                    max={100}
+                                    className="w-full"
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {/* Dynamic Custom Fields */}
+                    {selectedTypeProps.length > 0 && (
+                        <>
+                            <div className="col-span-3">
+                                <Divider />
+                                <h6 className="text-lg font-semibold mb-2 text-blue-700">
+                                    Propiedades de {tiposBien.find(t => t.id === formData.asset_type_id)?.nombre || 'Tipo'}
+                                </h6>
+                            </div>
+                            {selectedTypeProps.map((prop) => (
+                                <div key={prop.id}>
+                                    <label className="block text-sm font-semibold mb-2">
+                                        {prop.etiqueta}
+                                        {prop.requerido && <span className="text-red-500 ml-1">*</span>}
+                                    </label>
+                                    {renderCustomField(prop)}
+                                </div>
+                            ))}
+                        </>
+                    )}
                 </div>
 
                 <div className="flex gap-2 mt-6">

@@ -9,6 +9,8 @@ use App\Modules\Assets\Models\AssetLocation;
 use App\Modules\Assets\Models\AssetMovement;
 use App\Modules\Assets\Models\AssetDepreciation;
 use App\Modules\Assets\Models\AssetValuation;
+use App\Modules\Assets\Models\AssetType;
+use App\Modules\Assets\Models\AssetCustomValue;
 use App\Modules\Assets\Services\DepreciationCalculator;
 use App\Modules\Assets\Services\QRCodeGenerator;
 use App\Modules\Assets\Events\AssetCreated;
@@ -39,7 +41,7 @@ class AssetController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Asset::with(['categoria', 'ubicacion', 'proveedor', 'responsable']);
+        $query = Asset::with(['categoria', 'ubicacion', 'proveedor', 'responsable', 'tipoBien', 'customValues.property']);
 
         // Filtros
         if ($request->has('categoria_id')) {
@@ -83,6 +85,8 @@ class AssetController extends Controller
             'ubicacion',
             'proveedor',
             'responsable',
+            'tipoBien.properties',
+            'customValues.property',
             'movimientos' => function ($q) {
                 $q->latest()->limit(10);
             },
@@ -119,19 +123,55 @@ class AssetController extends Controller
             'vida_util_anos' => 'nullable|integer|min:1',
             'fecha_adquisicion' => 'required|date',
             'metodo_depreciacion' => 'nullable|string|in:lineal,acelerada,unidades_producidas',
+            'asset_type_id' => 'nullable|exists:asset_types,id',
+            'custom_values' => 'nullable|array',
+            'custom_values.*.property_id' => 'required_with:custom_values|exists:asset_type_properties,id',
+            'custom_values.*.valor' => 'nullable|string',
         ]);
 
         try {
+            // Si se eligió un tipo de bien, aplicar defaults
+            if (!empty($validated['asset_type_id'])) {
+                $tipoBien = AssetType::find($validated['asset_type_id']);
+                // Si el tipo no es depreciable, forzar vida_util a null
+                if ($tipoBien && !$tipoBien->es_depreciable) {
+                    $validated['vida_util_anos'] = null;
+                    $validated['valor_residual'] = 0;
+                }
+                // Aplicar vida útil default si no se proporcionó
+                if ($tipoBien && $tipoBien->vida_util_default && empty($validated['vida_util_anos'])) {
+                    $validated['vida_util_anos'] = $tipoBien->vida_util_default;
+                }
+            }
+
             // Pre-llenar metodo_depreciacion desde categoría si no se envía
             if (empty($validated['metodo_depreciacion'])) {
                 $categoria = AssetCategory::find($validated['categoria_id']);
                 $validated['metodo_depreciacion'] = $categoria->metodo_depreciacion ?? 'lineal';
             }
 
+            // Extraer custom_values antes de crear
+            $customValues = $validated['custom_values'] ?? [];
+            unset($validated['custom_values']);
+
             $asset = Asset::create($validated);
 
-            // Calcular depreciación
-            $this->depreciationCalculator->saveDepreciation($asset);
+            // Guardar valores personalizados
+            foreach ($customValues as $cv) {
+                if ($cv['valor'] !== null && $cv['valor'] !== '') {
+                    AssetCustomValue::create([
+                        'asset_id' => $asset->id,
+                        'asset_type_property_id' => $cv['property_id'],
+                        'valor' => $cv['valor'],
+                    ]);
+                }
+            }
+
+            // Calcular depreciación (solo si es depreciable)
+            $esDep = $asset->tipoBien?->es_depreciable ?? true;
+            if ($esDep) {
+                $this->depreciationCalculator->saveDepreciation($asset);
+            }
 
             // Disparar evento
             AssetCreated::dispatch($asset);
@@ -161,12 +201,31 @@ class AssetController extends Controller
             'valor_residual' => 'nullable|numeric|min:0',
             'vida_util_anos' => 'nullable|integer|min:1',
             'metodo_depreciacion' => 'nullable|string|in:lineal,acelerada,unidades_producidas',
+            'asset_type_id' => 'nullable|exists:asset_types,id',
+            'custom_values' => 'nullable|array',
+            'custom_values.*.property_id' => 'required_with:custom_values|exists:asset_type_properties,id',
+            'custom_values.*.valor' => 'nullable|string',
         ]);
 
         try {
+            // Extraer custom_values antes de actualizar
+            $customValues = $validated['custom_values'] ?? [];
+            unset($validated['custom_values']);
+
             $asset->update($validated);
 
-            return response()->json(['mensaje' => 'Activo actualizado exitosamente', 'activo' => $asset]);
+            // Actualizar valores personalizados (upsert)
+            foreach ($customValues as $cv) {
+                AssetCustomValue::updateOrCreate(
+                    [
+                        'asset_id' => $asset->id,
+                        'asset_type_property_id' => $cv['property_id'],
+                    ],
+                    ['valor' => $cv['valor'] ?? null]
+                );
+            }
+
+            return response()->json(['mensaje' => 'Activo actualizado exitosamente', 'activo' => $asset->load('customValues.property')]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al actualizar activo: ' . $e->getMessage()], 500);
         }
@@ -268,6 +327,7 @@ class AssetController extends Controller
     public function getOptions()
     {
         return response()->json([
+            'tipos_bien' => AssetType::with('properties')->get(),
             'categorias' => AssetCategory::select('id', 'nombre', 'metodo_depreciacion')->get(),
             'ubicaciones' => AssetLocation::select('id', 'nombre', 'codigo')->get(),
             'proveedores' => Supplier::select('id', 'nombre', 'codigo')->get(),

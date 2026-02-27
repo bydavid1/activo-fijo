@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Modules\Assets\Http\Controllers\AssetController;
 use App\Modules\Assets\Http\Controllers\AssetCategoryController;
 use App\Modules\Assets\Http\Controllers\AssetLocationController;
+use App\Modules\Assets\Http\Controllers\AssetTypeController;
 use App\Modules\Suppliers\Http\Controllers\SupplierController;
 use App\Modules\Employees\Http\Controllers\EmployeeController;
 use App\Modules\Inventory\Http\Controllers\InventoryController;
@@ -53,6 +54,19 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/{category}', [AssetCategoryController::class, 'show'])->name('show');
         Route::put('/{category}', [AssetCategoryController::class, 'update'])->name('update');
         Route::delete('/{category}', [AssetCategoryController::class, 'destroy'])->name('destroy');
+    });
+
+    // ==================== ASSET TYPES (Tipos de Bien) ====================
+    Route::prefix('asset-types')->name('asset-types.')->group(function () {
+        Route::get('/', [AssetTypeController::class, 'index'])->name('index');
+        Route::post('/', [AssetTypeController::class, 'store'])->name('store');
+        Route::get('/{assetType}', [AssetTypeController::class, 'show'])->name('show');
+        Route::put('/{assetType}', [AssetTypeController::class, 'update'])->name('update');
+        Route::delete('/{assetType}', [AssetTypeController::class, 'destroy'])->name('destroy');
+        // Propiedades del tipo
+        Route::post('/{assetType}/properties', [AssetTypeController::class, 'storeProperty'])->name('properties.store');
+        Route::put('/{assetType}/properties/{property}', [AssetTypeController::class, 'updateProperty'])->name('properties.update');
+        Route::delete('/{assetType}/properties/{property}', [AssetTypeController::class, 'destroyProperty'])->name('properties.destroy');
     });
 
     // ==================== LOCATIONS ====================

@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             AssetLocationSeeder::class,
             SupplierSeeder::class,
             EmployeeSeeder::class,
+            AssetTypeSeeder::class,
             AssetSeeder::class,
         ]);
     }

@@ -76,6 +76,14 @@ Route::prefix('categories')->middleware('auth')->name('categories.')->group(func
     })->name('index');
 });
 
+Route::prefix('asset-types')->middleware('auth')->name('asset-types.')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('AssetTypes/Index', [
+            'user' => auth()->user(),
+        ]);
+    })->name('index');
+});
+
 Route::prefix('locations')->middleware('auth')->name('locations.')->group(function () {
     Route::get('/', function () {
         return Inertia::render('Locations/Index', [
