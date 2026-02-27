@@ -84,6 +84,28 @@ Route::prefix('asset-types')->middleware('auth')->name('asset-types.')->group(fu
     })->name('index');
 });
 
+Route::prefix('inventory-audits')->middleware('auth')->name('inventory-audits.')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('InventoryAudits/Index', [
+            'user' => auth()->user(),
+        ]);
+    })->name('index');
+
+    Route::get('/{audit}/scanner', function ($audit) {
+        return Inertia::render('InventoryAudits/Scanner', [
+            'user' => auth()->user(),
+            'auditId' => $audit,
+        ]);
+    })->name('scanner');
+
+    Route::get('/{audit}/report', function ($audit) {
+        return Inertia::render('InventoryAudits/Report', [
+            'user' => auth()->user(),
+            'auditId' => $audit,
+        ]);
+    })->name('report');
+});
+
 Route::prefix('locations')->middleware('auth')->name('locations.')->group(function () {
     Route::get('/', function () {
         return Inertia::render('Locations/Index', [

@@ -9,6 +9,7 @@ use App\Modules\Assets\Http\Controllers\AssetTypeController;
 use App\Modules\Suppliers\Http\Controllers\SupplierController;
 use App\Modules\Employees\Http\Controllers\EmployeeController;
 use App\Modules\Inventory\Http\Controllers\InventoryController;
+use App\Modules\Inventory\Http\Controllers\InventoryAuditController;
 use App\Modules\Maintenance\Http\Controllers\MaintenanceController;
 use App\Modules\Reports\Http\Controllers\ReportController;
 
@@ -95,6 +96,35 @@ Route::middleware('auth:web')->group(function () {
         Route::put('/{employee}', [EmployeeController::class, 'update'])->name('update');
         Route::post('/sync', [EmployeeController::class, 'syncExternal'])->name('sync');
         Route::get('/{employee}/sync-logs', [EmployeeController::class, 'getSyncLogs'])->name('sync-logs');
+    });
+
+    // ==================== ASSET TYPES ====================
+    Route::prefix('asset-types')->name('asset-types.')->group(function () {
+        Route::get('/', [AssetTypeController::class, 'index'])->name('index');
+        Route::post('/', [AssetTypeController::class, 'store'])->name('store');
+        Route::get('/{assetType}', [AssetTypeController::class, 'show'])->name('show');
+        Route::put('/{assetType}', [AssetTypeController::class, 'update'])->name('update');
+        Route::delete('/{assetType}', [AssetTypeController::class, 'destroy'])->name('destroy');
+
+        // Asset Type Properties
+        Route::post('/{assetType}/properties', [AssetTypeController::class, 'storeProperty'])->name('properties.store');
+        Route::put('/{assetType}/properties/{property}', [AssetTypeController::class, 'updateProperty'])->name('properties.update');
+        Route::delete('/{assetType}/properties/{property}', [AssetTypeController::class, 'destroyProperty'])->name('properties.destroy');
+    });
+
+    // ==================== INVENTORY AUDITS ====================
+    Route::prefix('inventory-audits')->name('inventory-audits.')->group(function () {
+        Route::get('/', [InventoryAuditController::class, 'index'])->name('index');
+        Route::post('/', [InventoryAuditController::class, 'store'])->name('store');
+        Route::get('/options', [InventoryAuditController::class, 'getOptions'])->name('options');
+        Route::get('/{audit}', [InventoryAuditController::class, 'show'])->name('show');
+        Route::delete('/{audit}', [InventoryAuditController::class, 'destroy'])->name('destroy');
+
+        // Audit Actions
+        Route::post('/{audit}/iniciar', [InventoryAuditController::class, 'iniciar'])->name('iniciar');
+        Route::post('/{audit}/escanear', [InventoryAuditController::class, 'escanearCodigo'])->name('escanear');
+        Route::post('/{audit}/finalizar', [InventoryAuditController::class, 'finalizar'])->name('finalizar');
+        Route::get('/{audit}/reporte', [InventoryAuditController::class, 'reporte'])->name('reporte');
     });
 
     // ==================== INVENTORY ====================

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Sidebar } from 'primereact/sidebar';
 import { Button } from 'primereact/button';
 import { Menu } from 'primereact/menu';
@@ -37,7 +37,10 @@ export default function AppLayout({ children, user }) {
         {
             label: 'Inventario',
             icon: 'pi pi-fw pi-check-square',
-            command: () => window.location.href = '/inventory',
+            items: [
+                { label: 'Gestión General', command: () => window.location.href = '/inventory' },
+                { label: 'Levantamientos', icon: 'pi pi-camera', command: () => window.location.href = '/inventory-audits' },
+            ]
         },
         {
             label: 'Mantenimiento',
