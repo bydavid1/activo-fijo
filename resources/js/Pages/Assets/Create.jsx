@@ -11,6 +11,7 @@ import { Toast } from 'primereact/toast';
 import { FileUpload } from 'primereact/fileupload';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Divider } from 'primereact/divider';
+import { Message } from 'primereact/message';
 import { useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import axios from 'axios';
@@ -182,33 +183,75 @@ export default function CreateAsset({ user }) {
     return (
         <AppLayout user={user}>
             <Toast ref={toast} />
-            <Card className="m-4">
-                <h2 className="text-2xl font-bold mb-4">Crear Nuevo Activo</h2>
+            <Card className="m-2 md:m-4">
+                {/* Encabezado con icono y botón volver */}
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                        <i className="pi pi-box text-3xl text-primary"></i>
+                        <div>
+                            <h2 className="text-xl md:text-2xl font-bold m-0">Registrar Nuevo Activo</h2>
+                            <p className="text-gray-500 text-sm m-0">Complete la información del activo fijo</p>
+                        </div>
+                    </div>
+                    <Button
+                        label="Volver"
+                        icon="pi pi-arrow-left"
+                        severity="secondary"
+                        outlined
+                        onClick={() => router.visit('/assets')}
+                        className="w-full md:w-auto"
+                    />
+                </div>
+
+                {/* Panel de ayuda */}
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mb-4">
+                    <div className="flex items-start gap-3">
+                        <i className="pi pi-info-circle text-blue-500 text-xl mt-1"></i>
+                        <div>
+                            <p className="font-semibold text-blue-800 m-0 mb-1">Consejos para registrar un activo</p>
+                            <ul className="text-sm text-blue-700 m-0 pl-4 space-y-1">
+                                <li>Los campos marcados con <span className="text-red-500 font-bold">*</span> son obligatorios</li>
+                                <li>El <strong>código</strong> debe ser único y servirá para identificar el activo en el sistema</li>
+                                <li>Seleccione un <strong>Tipo de Bien</strong> para habilitar propiedades específicas del activo</li>
+                                <li>El <strong>valor de compra</strong> se usará para calcular la depreciación automáticamente</li>
+                                <li>Puede adjuntar fotos y documentos como facturas o garantías</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
                 <form onSubmit={handleSubmit}>
                     {/* ═══════════════ INFORMACIÓN BÁSICA ═══════════════ */}
-                    <Divider align="left"><span className="font-bold text-primary">Información Básica</span></Divider>
-                    <div className="grid grid-cols-2 gap-4">
+                    <Divider align="left"><span className="font-bold text-primary"><i className="pi pi-id-card mr-2"></i>Información Básica</span></Divider>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2">Código *</label>
+                            <label className="block text-sm font-medium mb-2">
+                                Código <span className="text-red-500">*</span>
+                                <span className="text-xs text-gray-400 ml-2">(Identificador único)</span>
+                            </label>
                             <InputText
                                 name="codigo"
                                 value={formData.codigo}
                                 onChange={handleInputChange}
                                 className="w-full"
+                                placeholder="Ej: ACT-001, PC-2024-001"
                                 required
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Nombre *</label>
+                            <label className="block text-sm font-medium mb-2">
+                                Nombre <span className="text-red-500">*</span>
+                            </label>
                             <InputText
                                 name="nombre"
                                 value={formData.nombre}
                                 onChange={handleInputChange}
                                 className="w-full"
+                                placeholder="Ej: Laptop Dell Latitude 5520"
                                 required
                             />
                         </div>
-                        <div className="col-span-2">
+                        <div className="md:col-span-2">
                             <label className="block text-sm font-medium mb-2">Descripción</label>
                             <InputTextarea
                                 name="descripcion"
@@ -216,10 +259,14 @@ export default function CreateAsset({ user }) {
                                 onChange={handleInputChange}
                                 className="w-full"
                                 rows={3}
+                                placeholder="Descripción detallada del activo, características principales..."
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Tipo de Bien</label>
+                            <label className="block text-sm font-medium mb-2">
+                                Tipo de Bien
+                                <span className="text-xs text-gray-400 ml-2">(Habilita propiedades específicas)</span>
+                            </label>
                             <Dropdown
                                 value={formData.asset_type_id}
                                 options={assetTypes}
@@ -232,7 +279,9 @@ export default function CreateAsset({ user }) {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Categoría *</label>
+                            <label className="block text-sm font-medium mb-2">
+                                Categoría <span className="text-red-500">*</span>
+                            </label>
                             <Dropdown
                                 value={formData.categoria_id}
                                 options={categories}
@@ -251,6 +300,7 @@ export default function CreateAsset({ user }) {
                                 value={formData.marca}
                                 onChange={handleInputChange}
                                 className="w-full"
+                                placeholder="Ej: Dell, HP, Samsung"
                             />
                         </div>
                         <div>
@@ -260,19 +310,26 @@ export default function CreateAsset({ user }) {
                                 value={formData.modelo}
                                 onChange={handleInputChange}
                                 className="w-full"
+                                placeholder="Ej: Latitude 5520"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Serie</label>
+                            <label className="block text-sm font-medium mb-2">
+                                Número de Serie
+                                <span className="text-xs text-gray-400 ml-2">(Para garantías)</span>
+                            </label>
                             <InputText
                                 name="serie"
                                 value={formData.serie}
                                 onChange={handleInputChange}
                                 className="w-full"
+                                placeholder="Ej: SN123456789"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Ubicación *</label>
+                            <label className="block text-sm font-medium mb-2">
+                                Ubicación <span className="text-red-500">*</span>
+                            </label>
                             <Dropdown
                                 value={formData.ubicacion_id}
                                 options={locations}
@@ -292,7 +349,7 @@ export default function CreateAsset({ user }) {
                                 optionLabel="nombre"
                                 optionValue="id"
                                 onChange={(e) => setFormData({...formData, responsable_id: e.value})}
-                                placeholder="Seleccionar responsable"
+                                placeholder="Empleado a cargo del activo"
                                 className="w-full"
                                 showClear
                             />
@@ -302,8 +359,14 @@ export default function CreateAsset({ user }) {
                     {/* ═══════════════ PROPIEDADES PERSONALIZADAS ═══════════════ */}
                     {selectedType?.properties?.length > 0 && (
                         <>
-                            <Divider align="left"><span className="font-bold text-primary">Propiedades de {selectedType.nombre}</span></Divider>
-                            <div className="grid grid-cols-2 gap-4">
+                            <Divider align="left"><span className="font-bold text-primary"><i className="pi pi-list mr-2"></i>Propiedades de {selectedType.nombre}</span></Divider>
+                            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded mb-4">
+                                <p className="text-sm text-yellow-700 m-0">
+                                    <i className="pi pi-info-circle mr-2"></i>
+                                    Estos campos son específicos para activos de tipo <strong>{selectedType.nombre}</strong>
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {selectedType.properties.map(prop => (
                                     <div key={prop.id}>
                                         <label className="block text-sm font-medium mb-2">
@@ -347,8 +410,8 @@ export default function CreateAsset({ user }) {
                     )}
 
                     {/* ═══════════════ ADQUISICIÓN ═══════════════ */}
-                    <Divider align="left"><span className="font-bold text-primary">Información de Adquisición</span></Divider>
-                    <div className="grid grid-cols-2 gap-4">
+                    <Divider align="left"><span className="font-bold text-primary"><i className="pi pi-shopping-cart mr-2"></i>Información de Adquisición</span></Divider>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-2">Tipo de Adquisición *</label>
                             <Dropdown
@@ -432,8 +495,14 @@ export default function CreateAsset({ user }) {
                     </div>
 
                     {/* ═══════════════ VALORES Y DEPRECIACIÓN ═══════════════ */}
-                    <Divider align="left"><span className="font-bold text-primary">Valores y Depreciación</span></Divider>
-                    <div className="grid grid-cols-2 gap-4">
+                    <Divider align="left"><span className="font-bold text-primary"><i className="pi pi-dollar mr-2"></i>Valores y Depreciación</span></Divider>
+                    <div className="bg-green-50 border-l-4 border-green-500 p-3 rounded mb-4">
+                        <p className="text-sm text-green-700 m-0">
+                            <i className="pi pi-calculator mr-2"></i>
+                            La depreciación se calculará automáticamente según el método y vida útil seleccionados
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-2">Valor de Compra *</label>
                             <InputNumber
@@ -500,8 +569,8 @@ export default function CreateAsset({ user }) {
                     </div>
 
                     {/* ═══════════════ ARCHIVOS ADJUNTOS ═══════════════ */}
-                    <Divider align="left"><span className="font-bold text-primary">Archivos Adjuntos</span></Divider>
-                    <div className="grid grid-cols-2 gap-4">
+                    <Divider align="left"><span className="font-bold text-primary"><i className="pi pi-paperclip mr-2"></i>Archivos Adjuntos</span></Divider>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-2">Foto del Activo</label>
                             <FileUpload
@@ -533,12 +602,14 @@ export default function CreateAsset({ user }) {
                     </div>
 
                     {/* ═══════════════ BOTONES ═══════════════ */}
-                    <div className="flex gap-2 mt-6">
+                    <Divider />
+                    <div className="flex flex-col md:flex-row gap-2 mt-6">
                         <Button
                             type="submit"
                             label="Guardar Activo"
                             icon="pi pi-check"
                             loading={loading}
+                            className="p-button-success flex-1 md:flex-none"
                         />
                         <Button
                             type="button"
@@ -546,6 +617,7 @@ export default function CreateAsset({ user }) {
                             icon="pi pi-times"
                             severity="secondary"
                             onClick={() => router.visit('/assets')}
+                            className="flex-1 md:flex-none"
                         />
                     </div>
                 </form>

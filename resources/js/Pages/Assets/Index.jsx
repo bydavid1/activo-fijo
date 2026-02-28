@@ -659,12 +659,6 @@ const Assets = ({ user }) => {
                     tooltipOptions={{ position: 'top' }}
                 />
                 {/* Menú de más opciones */}
-                <Menu
-                    model={getMenuItems(menuAsset || rowData)}
-                    popup
-                    ref={menuRef}
-                    popupAlignment="right"
-                />
                 <Button
                     icon="pi pi-ellipsis-v"
                     className="p-button-secondary p-button-sm"
@@ -682,14 +676,19 @@ const Assets = ({ user }) => {
     return (
         <AppLayout user={user}>
             <Toast ref={toast} />
-
+            <Menu
+                model={menuAsset ? getMenuItems(menuAsset) : []}
+                popup
+                ref={menuRef}
+                popupAlignment="right"
+            />
             <Card className="bg-white shadow mb-6">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
                     <h5 className="text-xl md:text-2xl font-bold">Gestión de Activos</h5>
                     <Button
                         label="Nuevo Activo"
                         icon="pi pi-plus"
-                        onClick={() => handleOpenDialog()}
+                        onClick={() => window.location.href = '/assets/create'}
                         className="p-button-success w-full md:w-auto"
                     />
                 </div>

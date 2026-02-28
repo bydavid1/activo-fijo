@@ -374,10 +374,10 @@ export default function ShowAsset({ user, assetId }) {
                         <DataTable value={asset.movimientos || []} emptyMessage="Sin movimientos registrados">
                             <Column field="created_at" header="Fecha" body={(row) => formatDate(row.created_at)} />
                             <Column field="tipo" header="Tipo" body={(row) => <Tag value={row.tipo} />} />
-                            <Column field="ubicacion_anterior.nombre" header="Origen" />
-                            <Column field="ubicacion_nueva.nombre" header="Destino" />
-                            <Column field="motivo" header="Motivo" />
-                            <Column field="usuario.name" header="Usuario" />
+                            <Column header="Origen" body={(row) => row.ubicacion_anterior?.nombre || '-'} />
+                            <Column header="Destino" body={(row) => row.ubicacion_nueva?.nombre || '-'} />
+                            <Column field="motivo" header="Motivo" body={(row) => row.motivo || '-'} />
+                            <Column header="Usuario" body={(row) => row.usuario?.name || '-'} />
                         </DataTable>
                     </TabPanel>
 

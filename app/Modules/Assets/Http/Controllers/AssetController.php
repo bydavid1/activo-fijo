@@ -92,7 +92,9 @@ class AssetController extends Controller
             'attachments',
             'fotoPrincipal',
             'movimientos' => function ($q) {
-                $q->latest()->limit(10);
+                $q->with(['ubicacionAnterior', 'ubicacionNueva', 'usuario'])
+                  ->latest()
+                  ->limit(10);
             },
             'valuaciones' => function ($q) {
                 $q->latest();
@@ -433,11 +435,12 @@ class AssetController extends Controller
     }
 
     /**
-     * Obtener opciones para selects (categorías, ubicaciones, proveedores, empleados)
+     * Obtener opciones para selects (categorías, ubicaciones, proveedores, empleados, activos)
      */
     public function getOptions()
     {
         return response()->json([
+            'activos' => Asset::where('estado', 'activo')->select('id', 'codigo', 'nombre')->get(),
             'tipos_bien' => AssetType::with('properties')->get(),
             'categorias' => AssetCategory::select('id', 'nombre', 'metodo_depreciacion')->get(),
             'ubicaciones' => AssetLocation::select('id', 'nombre', 'codigo')->get(),
