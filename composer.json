@@ -13,6 +13,7 @@
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^3.1",
+        "picqer/php-barcode-generator": "^3.2",
         "saloonphp/saloon": "^3.14",
         "spatie/laravel-activitylog": "^4.12",
         "spatie/laravel-data": "^4.20",

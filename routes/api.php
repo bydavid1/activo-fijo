@@ -34,10 +34,13 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/', [AssetController::class, 'index'])->name('index');
         Route::post('/', [AssetController::class, 'store'])->name('store');
         Route::get('/options', [AssetController::class, 'getOptions'])->name('options');
+        Route::post('/batch-labels', [AssetController::class, 'generateBatchLabels'])->name('batch-labels');
         Route::get('/{asset}', [AssetController::class, 'show'])->name('show');
         Route::put('/{asset}', [AssetController::class, 'update'])->name('update');
         Route::delete('/{asset}', [AssetController::class, 'destroy'])->name('destroy');
         Route::get('/{asset}/qr', [AssetController::class, 'generateQR'])->name('qr');
+        Route::get('/{asset}/barcode', [AssetController::class, 'generateBarcode'])->name('barcode');
+        Route::get('/{asset}/label', [AssetController::class, 'generateLabel'])->name('label');
         Route::post('/{asset}/movements', [AssetController::class, 'recordMovement'])->name('record-movement');
         Route::post('/{asset}/dispose', [AssetController::class, 'dispose'])->name('dispose');
         Route::post('/{asset}/revalue', [AssetController::class, 'revalue'])->name('revalue');

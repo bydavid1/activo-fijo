@@ -305,6 +305,77 @@ class AssetController extends Controller
     }
 
     /**
+     * Generar código de barras on-the-fly
+     */
+    public function generateBarcode(Asset $asset)
+    {
+        try {
+            $barcodeBinary = $this->qrGenerator->generateBarcodeBinary($asset);
+
+            return response($barcodeBinary, 200, [
+                'Content-Type' => 'image/png',
+                'Content-Disposition' => "attachment; filename=\"Barcode_{$asset->codigo}.png\"",
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al generar código de barras: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Generar etiqueta completa para impresora de viñetas
+     */
+    public function generateLabel(Asset $asset)
+    {
+        try {
+            $asset->load('ubicacion');
+            $labelBinary = $this->qrGenerator->generateLabelBinary($asset);
+
+            return response($labelBinary, 200, [
+                'Content-Type' => 'image/png',
+                'Content-Disposition' => "attachment; filename=\"Label_{$asset->codigo}.png\"",
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al generar etiqueta: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Generar etiquetas en lote para múltiples activos
+     */
+    public function generateBatchLabels(Request $request)
+    {
+        $validated = $request->validate([
+            'asset_ids' => 'required|array|min:1',
+            'asset_ids.*' => 'exists:assets,id',
+            'columns' => 'nullable|integer|min:1|max:4',
+        ]);
+
+        try {
+            $assets = Asset::with('location')
+                ->whereIn('id', $validated['asset_ids'])
+                ->get()
+                ->toArray();
+
+            $columns = $validated['columns'] ?? 2;
+
+            // Convertir array a objetos Asset
+            $assetObjects = Asset::with('location')
+                ->whereIn('id', $validated['asset_ids'])
+                ->get()
+                ->all();
+
+            $batchBinary = $this->qrGenerator->generateBatchLabels($assetObjects, $columns);
+
+            return response($batchBinary, 200, [
+                'Content-Type' => 'image/png',
+                'Content-Disposition' => "attachment; filename=\"Labels_batch_" . date('Y-m-d_His') . ".png\"",
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al generar etiquetas en lote: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Registrar movimiento de activo
      */
     public function recordMovement(Request $request, Asset $asset)

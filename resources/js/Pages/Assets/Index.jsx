@@ -12,6 +12,8 @@ import { InputSwitch } from 'primereact/inputswitch';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Divider } from 'primereact/divider';
 import { Toast } from 'primereact/toast';
+import { TabView, TabPanel } from 'primereact/tabview';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import { useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import axios from 'axios';
@@ -54,6 +56,10 @@ const Assets = ({ user }) => {
     const [displayQrDialog, setDisplayQrDialog] = useState(false);
     const [qrAsset, setQrAsset] = useState(null);
     const [qrUrl, setQrUrl] = useState('');
+    const [barcodeUrl, setBarcodeUrl] = useState('');
+    const [labelUrl, setLabelUrl] = useState('');
+    const [loadingCode, setLoadingCode] = useState(false);
+    const [activeCodeTab, setActiveCodeTab] = useState(0);
 
     // Sell dialog state
     const [displaySellDialog, setDisplaySellDialog] = useState(false);
@@ -316,13 +322,115 @@ const Assets = ({ user }) => {
     // QR
     const handleShowQr = async (asset) => {
         setQrAsset(asset);
+        setActiveCodeTab(0);
+        setDisplayQrDialog(true);
+        await loadQrCode(asset.id);
+    };
+
+    const loadQrCode = async (assetId) => {
+        setLoadingCode(true);
         try {
-            const response = await axios.get(`/api/assets/${asset.id}/qr`, { responseType: 'blob' });
+            const response = await axios.get(`/api/assets/${assetId}/qr`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             setQrUrl(url);
-            setDisplayQrDialog(true);
         } catch (error) {
             toast.current.show({ severity: 'error', summary: 'Error', detail: 'Error generando QR' });
+        }
+        setLoadingCode(false);
+    };
+
+    const loadBarcode = async (assetId) => {
+        if (barcodeUrl) return; // Already loaded
+        setLoadingCode(true);
+        try {
+            const response = await axios.get(`/api/assets/${assetId}/barcode`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            setBarcodeUrl(url);
+        } catch (error) {
+            toast.current.show({ severity: 'error', summary: 'Error', detail: 'Error generando código de barras' });
+        }
+        setLoadingCode(false);
+    };
+
+    const loadLabel = async (assetId) => {
+        if (labelUrl) return; // Already loaded
+        setLoadingCode(true);
+        try {
+            const response = await axios.get(`/api/assets/${assetId}/label`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            setLabelUrl(url);
+        } catch (error) {
+            toast.current.show({ severity: 'error', summary: 'Error', detail: 'Error generando etiqueta' });
+        }
+        setLoadingCode(false);
+    };
+
+    const handleCodeTabChange = (e) => {
+        setActiveCodeTab(e.index);
+        if (qrAsset) {
+            if (e.index === 1) {
+                loadBarcode(qrAsset.id);
+            } else if (e.index === 2) {
+                loadLabel(qrAsset.id);
+            }
+        }
+    };
+
+    const closeCodeDialog = () => {
+        setDisplayQrDialog(false);
+        setQrUrl('');
+        setBarcodeUrl('');
+        setLabelUrl('');
+        setActiveCodeTab(0);
+    };
+
+    const handlePrint = async (imageUrl, title) => {
+        try {
+            // Convert blob URL to data URL for cross-window compatibility
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+
+            reader.onloadend = () => {
+                const dataUrl = reader.result;
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) {
+                    toast.current.show({ severity: 'error', summary: 'Error', detail: 'El navegador bloqueó la ventana emergente. Permita ventanas emergentes para imprimir.' });
+                    return;
+                }
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>${title}</title>
+                        <style>
+                            @page { margin: 10mm; }
+                            body {
+                                margin: 0;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                min-height: 100vh;
+                            }
+                            img { max-width: 100%; height: auto; }
+                            @media print {
+                                body { margin: 0; }
+                                img { max-width: 100%; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="${dataUrl}" onload="setTimeout(() => { window.print(); window.close(); }, 100);" />
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            };
+
+            reader.readAsDataURL(blob);
+        } catch (error) {
+            console.error('Print error:', error);
+            toast.current.show({ severity: 'error', summary: 'Error', detail: 'Error al preparar la impresión' });
         }
     };
 
@@ -363,6 +471,28 @@ const Assets = ({ user }) => {
             const link = document.createElement('a');
             link.href = qrUrl;
             link.setAttribute('download', `qr_${qrAsset.codigo}.png`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        }
+    };
+
+    const handleDownloadBarcode = () => {
+        if (barcodeUrl && qrAsset) {
+            const link = document.createElement('a');
+            link.href = barcodeUrl;
+            link.setAttribute('download', `barcode_${qrAsset.codigo}.png`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        }
+    };
+
+    const handleDownloadLabel = () => {
+        if (labelUrl && qrAsset) {
+            const link = document.createElement('a');
+            link.href = labelUrl;
+            link.setAttribute('download', `label_${qrAsset.codigo}.png`);
             document.body.appendChild(link);
             link.click();
             link.parentNode.removeChild(link);
@@ -959,23 +1089,103 @@ const Assets = ({ user }) => {
                 </div>
             </Dialog>
 
-            {/* QR Dialog */}
+            {/* QR / Barcode / Label Dialog */}
             <Dialog
                 visible={displayQrDialog}
-                style={{ width: '25vw' }}
-                header={`QR: ${qrAsset?.codigo || ''}`}
+                style={{ width: '500px', maxWidth: '95vw' }}
+                header={`Códigos: ${qrAsset?.codigo || ''} - ${qrAsset?.nombre || ''}`}
                 modal
-                onHide={() => { setDisplayQrDialog(false); setQrUrl(''); }}
+                onHide={closeCodeDialog}
             >
-                <div className="flex flex-col items-center">
-                    {qrUrl && <img src={qrUrl} alt="QR Code" className="mb-4" style={{ width: 250, height: 250 }} />}
-                    <Button
-                        label="Descargar QR"
-                        icon="pi pi-download"
-                        onClick={handleDownloadQr}
-                        className="p-button-info"
-                    />
-                </div>
+                <TabView activeIndex={activeCodeTab} onTabChange={handleCodeTabChange}>
+                    <TabPanel header="Código QR" leftIcon="pi pi-qrcode mr-2">
+                        <div className="flex flex-col items-center p-4">
+                            {loadingCode && activeCodeTab === 0 ? (
+                                <ProgressSpinner style={{ width: '50px', height: '50px' }} />
+                            ) : qrUrl ? (
+                                <>
+                                    <img src={qrUrl} alt="QR Code" className="mb-4" style={{ width: 250, height: 250 }} />
+                                    <div className="flex gap-2">
+                                        <Button
+                                            label="Descargar"
+                                            icon="pi pi-download"
+                                            onClick={handleDownloadQr}
+                                            className="p-button-info"
+                                        />
+                                        <Button
+                                            label="Imprimir"
+                                            icon="pi pi-print"
+                                            onClick={() => handlePrint(qrUrl, `QR_${qrAsset?.codigo}`)}
+                                            className="p-button-secondary"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-gray-500">Error cargando QR</p>
+                            )}
+                        </div>
+                    </TabPanel>
+                    <TabPanel header="Código de Barras" leftIcon="pi pi-bars mr-2">
+                        <div className="flex flex-col items-center p-4">
+                            {loadingCode && activeCodeTab === 1 ? (
+                                <ProgressSpinner style={{ width: '50px', height: '50px' }} />
+                            ) : barcodeUrl ? (
+                                <>
+                                    <img src={barcodeUrl} alt="Barcode" className="mb-4" style={{ maxWidth: '100%', height: 'auto' }} />
+                                    <p className="text-sm text-gray-600 mb-4">{qrAsset?.codigo}</p>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            label="Descargar"
+                                            icon="pi pi-download"
+                                            onClick={handleDownloadBarcode}
+                                            className="p-button-info"
+                                        />
+                                        <Button
+                                            label="Imprimir"
+                                            icon="pi pi-print"
+                                            onClick={() => handlePrint(barcodeUrl, `Barcode_${qrAsset?.codigo}`)}
+                                            className="p-button-secondary"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-gray-500">Cargando código de barras...</p>
+                            )}
+                        </div>
+                    </TabPanel>
+                    <TabPanel header="Etiqueta" leftIcon="pi pi-tag mr-2">
+                        <div className="flex flex-col items-center p-4">
+                            {loadingCode && activeCodeTab === 2 ? (
+                                <ProgressSpinner style={{ width: '50px', height: '50px' }} />
+                            ) : labelUrl ? (
+                                <>
+                                    <div className="border rounded p-2 mb-4 bg-white">
+                                        <img src={labelUrl} alt="Label" style={{ maxWidth: '100%', height: 'auto' }} />
+                                    </div>
+                                    <p className="text-xs text-gray-500 mb-4 text-center">
+                                        Etiqueta optimizada para impresoras térmicas de viñetas (400x200px)
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            label="Descargar"
+                                            icon="pi pi-download"
+                                            onClick={handleDownloadLabel}
+                                            className="p-button-info"
+                                        />
+                                        <Button
+                                            label="Imprimir Etiqueta"
+                                            icon="pi pi-print"
+                                            onClick={() => handlePrint(labelUrl, `Label_${qrAsset?.codigo}`)}
+                                            className="p-button-success"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-gray-500">Cargando etiqueta...</p>
+                            )}
+                        </div>
+                    </TabPanel>
+                </TabView>
             </Dialog>
 
             {/* Sell Dialog */}

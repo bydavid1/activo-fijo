@@ -37,10 +37,7 @@ export default function AppLayout({ children, user }) {
         {
             label: 'Inventario',
             icon: 'pi pi-fw pi-check-square',
-            items: [
-                { label: 'Gestión General', command: () => window.location.href = '/inventory' },
-                { label: 'Levantamientos', icon: 'pi pi-camera', command: () => window.location.href = '/inventory-audits' },
-            ]
+            command: () => window.location.href = '/inventory-audits',
         },
         {
             label: 'Mantenimiento',

@@ -129,15 +129,6 @@ Route::prefix('suppliers')->middleware('auth')->name('suppliers.')->group(functi
     })->name('index');
 });
 
-// ==================== INVENTORY ====================
-Route::prefix('inventory')->middleware('auth')->name('inventory.')->group(function () {
-    Route::get('/', function () {
-        return Inertia::render('Inventory/Index', [
-            'user' => auth()->user(),
-        ]);
-    })->name('index');
-});
-
 // ==================== MAINTENANCE ====================
 Route::prefix('maintenance')->middleware('auth')->name('maintenance.')->group(function () {
     Route::get('/', function () {
