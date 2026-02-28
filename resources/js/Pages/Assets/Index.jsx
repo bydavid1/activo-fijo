@@ -55,6 +55,41 @@ const Assets = ({ user }) => {
     const [qrAsset, setQrAsset] = useState(null);
     const [qrUrl, setQrUrl] = useState('');
 
+    // Sell dialog state
+    const [displaySellDialog, setDisplaySellDialog] = useState(false);
+    const [sellAsset, setSellAsset] = useState(null);
+    const [sellData, setSellData] = useState({
+        tipo_venta: 'directa',
+        tipo_pago: 'efectivo',
+        condicion_pago: 'contado',
+        precio_venta: 0,
+        comprador_nombre: '',
+        comprador_documento: '',
+        comprador_telefono: '',
+        motivo: '',
+    });
+
+    const tiposVenta = [
+        { label: 'Venta Directa', value: 'directa' },
+        { label: 'Subasta', value: 'subasta' },
+        { label: 'Licitación', value: 'licitacion' },
+    ];
+
+    const tiposPago = [
+        { label: 'Efectivo', value: 'efectivo' },
+        { label: 'Transferencia', value: 'transferencia' },
+        { label: 'Cheque', value: 'cheque' },
+        { label: 'Tarjeta', value: 'tarjeta' },
+        { label: 'Otro', value: 'otro' },
+    ];
+
+    const condicionesPago = [
+        { label: 'Al Contado', value: 'contado' },
+        { label: 'Crédito 30 días', value: 'credito_30' },
+        { label: 'Crédito 60 días', value: 'credito_60' },
+        { label: 'Crédito 90 días', value: 'credito_90' },
+    ];
+
     const revalueMethods = [
         { label: 'Tasación', value: 'tasacion' },
         { label: 'Mercado', value: 'mercado' },
@@ -291,6 +326,38 @@ const Assets = ({ user }) => {
         }
     };
 
+    // Sell
+    const handleOpenSell = (asset) => {
+        setSellAsset(asset);
+        setSellData({
+            tipo_venta: 'directa',
+            tipo_pago: 'efectivo',
+            condicion_pago: 'contado',
+            precio_venta: asset.valor_compra || 0,
+            comprador_nombre: '',
+            comprador_documento: '',
+            comprador_telefono: '',
+            motivo: '',
+        });
+        setDisplaySellDialog(true);
+    };
+
+    const handleSell = async () => {
+        if (!sellData.comprador_nombre) {
+            toast.current.show({ severity: 'warn', summary: 'Atención', detail: 'Ingrese el nombre del comprador' });
+            return;
+        }
+        try {
+            await axios.post(`/api/assets/${sellAsset.id}/sell`, sellData);
+            toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Activo vendido correctamente' });
+            setDisplaySellDialog(false);
+            fetchAssets();
+        } catch (error) {
+            const msg = error.response?.data?.error || 'Error al vender activo';
+            toast.current.show({ severity: 'error', summary: 'Error', detail: msg });
+        }
+    };
+
     const handleDownloadQr = () => {
         if (qrUrl && qrAsset) {
             const link = document.createElement('a');
@@ -392,6 +459,13 @@ const Assets = ({ user }) => {
         return (
             <div className="flex gap-1">
                 <Button
+                    icon="pi pi-eye"
+                    className="p-button-rounded p-button-info p-button-sm"
+                    onClick={() => window.location.href = `/assets/${rowData.id}`}
+                    tooltip="Ver Detalle"
+                    tooltipPosition="top"
+                />
+                <Button
                     icon="pi pi-pencil"
                     className="p-button-rounded p-button-warning p-button-sm"
                     onClick={() => handleOpenDialog(rowData)}
@@ -400,13 +474,20 @@ const Assets = ({ user }) => {
                 />
                 <Button
                     icon="pi pi-qrcode"
-                    className="p-button-rounded p-button-info p-button-sm"
+                    className="p-button-rounded p-button-secondary p-button-sm"
                     onClick={() => handleShowQr(rowData)}
                     tooltip="Ver QR"
                     tooltipPosition="top"
                 />
                 {rowData.estado === 'activo' && (
                     <>
+                        <Button
+                            icon="pi pi-shopping-cart"
+                            className="p-button-rounded p-button-success p-button-sm"
+                            onClick={() => handleOpenSell(rowData)}
+                            tooltip="Vender"
+                            tooltipPosition="top"
+                        />
                         <Button
                             icon="pi pi-ban"
                             className="p-button-rounded p-button-secondary p-button-sm"
@@ -893,6 +974,112 @@ const Assets = ({ user }) => {
                         icon="pi pi-download"
                         onClick={handleDownloadQr}
                         className="p-button-info"
+                    />
+                </div>
+            </Dialog>
+
+            {/* Sell Dialog */}
+            <Dialog
+                visible={displaySellDialog}
+                style={{ width: '50vw' }}
+                header={`Vender Activo: ${sellAsset?.codigo || ''} - ${sellAsset?.nombre || ''}`}
+                modal
+                onHide={() => setDisplaySellDialog(false)}
+            >
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Tipo de Venta *</label>
+                        <Dropdown
+                            value={sellData.tipo_venta}
+                            onChange={(e) => setSellData({ ...sellData, tipo_venta: e.value })}
+                            options={tiposVenta}
+                            optionLabel="label"
+                            optionValue="value"
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Tipo de Pago *</label>
+                        <Dropdown
+                            value={sellData.tipo_pago}
+                            onChange={(e) => setSellData({ ...sellData, tipo_pago: e.value })}
+                            options={tiposPago}
+                            optionLabel="label"
+                            optionValue="value"
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Condición de Pago *</label>
+                        <Dropdown
+                            value={sellData.condicion_pago}
+                            onChange={(e) => setSellData({ ...sellData, condicion_pago: e.value })}
+                            options={condicionesPago}
+                            optionLabel="label"
+                            optionValue="value"
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Precio de Venta *</label>
+                        <InputNumber
+                            value={sellData.precio_venta}
+                            onChange={(e) => setSellData({ ...sellData, precio_venta: e.value })}
+                            mode="currency"
+                            currency="USD"
+                            locale="en-US"
+                            className="w-full"
+                        />
+                    </div>
+                    <Divider className="col-span-2" />
+                    <div className="col-span-2">
+                        <p className="font-semibold mb-2">Datos del Comprador</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Nombre del Comprador *</label>
+                        <InputText
+                            value={sellData.comprador_nombre}
+                            onChange={(e) => setSellData({ ...sellData, comprador_nombre: e.target.value })}
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Documento/NIT</label>
+                        <InputText
+                            value={sellData.comprador_documento}
+                            onChange={(e) => setSellData({ ...sellData, comprador_documento: e.target.value })}
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Teléfono</label>
+                        <InputText
+                            value={sellData.comprador_telefono}
+                            onChange={(e) => setSellData({ ...sellData, comprador_telefono: e.target.value })}
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Motivo / Observaciones</label>
+                        <InputText
+                            value={sellData.motivo}
+                            onChange={(e) => setSellData({ ...sellData, motivo: e.target.value })}
+                            className="w-full"
+                        />
+                    </div>
+                </div>
+                <div className="flex gap-2 mt-6">
+                    <Button
+                        label="Confirmar Venta"
+                        icon="pi pi-shopping-cart"
+                        onClick={handleSell}
+                        className="p-button-success"
+                    />
+                    <Button
+                        label="Cancelar"
+                        icon="pi pi-times"
+                        onClick={() => setDisplaySellDialog(false)}
+                        className="p-button-secondary"
                     />
                 </div>
             </Dialog>

@@ -17,9 +17,18 @@ class AssetValuation extends Model
         'valor_nuevo',
         'fecha_efectiva',
         'metodo',
+        'tipo_revaluo',
+        'perito_nombre',
+        'documento_respaldo',
         'notas',
         'usuario_id',
     ];
+
+    // Constantes para tipos de revalúo
+    const TIPO_REVALORIZACION = 'revalorizacion';
+    const TIPO_DETERIORO = 'deterioro';
+    const TIPO_AJUSTE_INFLACION = 'ajuste_inflacion';
+    const TIPO_TASACION = 'tasacion';
 
     protected $casts = [
         'fecha_efectiva' => 'date',

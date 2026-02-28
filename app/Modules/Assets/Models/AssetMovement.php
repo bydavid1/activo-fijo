@@ -21,14 +21,58 @@ class AssetMovement extends Model
         'motivo',
         'fecha_devolucion_esperada',
         'usuario_id',
+        // Campos de venta
+        'tipo_venta',
+        'tipo_pago',
+        'condicion_pago',
+        'precio_venta',
+        'comprador_nombre',
+        'comprador_documento',
+        'comprador_telefono',
+        'documento_venta',
     ];
 
     protected $casts = [
         'fecha_devolucion_esperada' => 'date',
+        'precio_venta' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
+
+    // Constantes para tipos de movimiento
+    const TIPO_TRASLADO = 'traslado';
+    const TIPO_REUBICACION = 'reubicacion';
+    const TIPO_MANTENIMIENTO = 'mantenimiento';
+    const TIPO_VENTA = 'venta';
+    const TIPO_BAJA = 'baja';
+    const TIPO_OTRO = 'otro';
+
+    // Constantes para tipos de venta
+    const VENTA_DIRECTA = 'directa';
+    const VENTA_SUBASTA = 'subasta';
+    const VENTA_LICITACION = 'licitacion';
+
+    // Constantes para tipos de pago
+    const PAGO_EFECTIVO = 'efectivo';
+    const PAGO_TRANSFERENCIA = 'transferencia';
+    const PAGO_CHEQUE = 'cheque';
+    const PAGO_TARJETA = 'tarjeta';
+    const PAGO_OTRO = 'otro';
+
+    // Constantes para condiciones de pago
+    const CONDICION_CONTADO = 'contado';
+    const CONDICION_CREDITO_30 = 'credito_30';
+    const CONDICION_CREDITO_60 = 'credito_60';
+    const CONDICION_CREDITO_90 = 'credito_90';
+
+    /**
+     * Verifica si es un movimiento de venta
+     */
+    public function esVenta(): bool
+    {
+        return $this->tipo === self::TIPO_VENTA;
+    }
 
     public function asset()
     {

@@ -35,6 +35,13 @@ Route::prefix('assets')->middleware('auth')->name('assets.')->group(function () 
         ]);
     })->name('create');
 
+    Route::get('/{asset}', function ($asset) {
+        return Inertia::render('Assets/Show', [
+            'user' => auth()->user(),
+            'assetId' => $asset,
+        ]);
+    })->name('show');
+
     Route::get('/{asset}/edit', function ($asset) {
         return Inertia::render('Assets/Edit', [
             'user' => auth()->user(),

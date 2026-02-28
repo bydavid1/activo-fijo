@@ -41,6 +41,10 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/{asset}/movements', [AssetController::class, 'recordMovement'])->name('record-movement');
         Route::post('/{asset}/dispose', [AssetController::class, 'dispose'])->name('dispose');
         Route::post('/{asset}/revalue', [AssetController::class, 'revalue'])->name('revalue');
+        // Nuevas rutas
+        Route::post('/{asset}/sell', [AssetController::class, 'sellAsset'])->name('sell');
+        Route::post('/{asset}/attachments', [AssetController::class, 'uploadAttachment'])->name('attachments.store');
+        Route::delete('/{asset}/attachments/{attachment}', [AssetController::class, 'deleteAttachment'])->name('attachments.destroy');
     });
 
     // ==================== MOVEMENTS ====================

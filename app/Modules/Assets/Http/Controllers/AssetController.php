@@ -11,6 +11,7 @@ use App\Modules\Assets\Models\AssetDepreciation;
 use App\Modules\Assets\Models\AssetValuation;
 use App\Modules\Assets\Models\AssetType;
 use App\Modules\Assets\Models\AssetCustomValue;
+use App\Modules\Assets\Models\AssetAttachment;
 use App\Modules\Assets\Services\DepreciationCalculator;
 use App\Modules\Assets\Services\QRCodeGenerator;
 use App\Modules\Assets\Events\AssetCreated;
@@ -21,6 +22,7 @@ use App\Modules\Employees\Models\Employee;
 use App\Modules\Suppliers\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AssetController extends Controller
@@ -87,17 +89,29 @@ class AssetController extends Controller
             'responsable',
             'tipoBien.properties',
             'customValues.property',
+            'attachments',
+            'fotoPrincipal',
             'movimientos' => function ($q) {
                 $q->latest()->limit(10);
             },
             'valuaciones' => function ($q) {
                 $q->latest();
             },
+            'depreciaciones' => function ($q) {
+                $q->orderBy('ano', 'desc')->orderBy('mes', 'desc')->limit(12);
+            },
         ]);
 
-        // Agregar depreciación actual
-        $depreciacionActual = $this->depreciationCalculator->getCurrentValuation($asset);
-        $asset->append('depreciacion_actual');
+        // Agregar información de depreciación calculada
+        $asset->info_depreciacion = [
+            'fecha_inicio' => $asset->calcularFechaInicioDepreciacion(),
+            'depreciacion_mensual' => $asset->depreciacion_mensual,
+            'depreciacion_anual' => $asset->depreciacion_anual,
+            'meses_depreciados' => $asset->meses_depreciados,
+            'depreciacion_acumulada' => $asset->depreciacion_acumulada,
+            'valor_en_libros' => $asset->valor_en_libros,
+            'porcentaje_vida_util' => $asset->porcentaje_vida_util,
+        ];
 
         return response()->json($asset);
     }
@@ -123,10 +137,22 @@ class AssetController extends Controller
             'vida_util_anos' => 'nullable|integer|min:1',
             'fecha_adquisicion' => 'required|date',
             'metodo_depreciacion' => 'nullable|string|in:lineal,acelerada,unidades_producidas',
+            'periodicidad_depreciacion' => 'nullable|string|in:mensual,anual',
+            'aplicar_regla_dia_15' => 'nullable|boolean',
             'asset_type_id' => 'nullable|exists:asset_types,id',
             'custom_values' => 'nullable|array',
             'custom_values.*.property_id' => 'required_with:custom_values|exists:asset_type_properties,id',
             'custom_values.*.valor' => 'nullable|string',
+            // Nuevos campos de adquisición
+            'tipo_adquisicion' => 'nullable|string|in:compra,donacion,transferencia,comodato,leasing',
+            'orden_compra' => 'nullable|string|max:100',
+            'numero_factura' => 'nullable|string|max:100',
+            'donante_nombre' => 'nullable|string|max:255',
+            'donacion_documento' => 'nullable|string',
+            // Archivos adjuntos
+            'foto' => 'nullable|image|max:5120', // 5MB max
+            'documentos' => 'nullable|array',
+            'documentos.*' => 'file|max:10240', // 10MB max cada uno
         ]);
 
         try {
@@ -150,9 +176,13 @@ class AssetController extends Controller
                 $validated['metodo_depreciacion'] = $categoria->metodo_depreciacion ?? 'lineal';
             }
 
-            // Extraer custom_values antes de crear
+            // Extraer custom_values y archivos antes de crear
             $customValues = $validated['custom_values'] ?? [];
             unset($validated['custom_values']);
+
+            $foto = $request->file('foto');
+            $documentos = $request->file('documentos') ?? [];
+            unset($validated['foto'], $validated['documentos']);
 
             $asset = Asset::create($validated);
 
@@ -165,6 +195,16 @@ class AssetController extends Controller
                         'valor' => $cv['valor'],
                     ]);
                 }
+            }
+
+            // Guardar foto principal
+            if ($foto) {
+                $this->guardarArchivo($asset, $foto, 'foto', true);
+            }
+
+            // Guardar documentos adicionales
+            foreach ($documentos as $documento) {
+                $this->guardarArchivo($asset, $documento, 'otro', false);
             }
 
             // Calcular depreciación (solo si es depreciable)
@@ -483,5 +523,153 @@ class AssetController extends Controller
 
         $perPage = $request->get('per_page', 15);
         return response()->json($query->latest()->paginate($perPage));
+    }
+
+    /**
+     * Guardar archivo adjunto
+     */
+    private function guardarArchivo(Asset $asset, $file, string $tipo, bool $esPrincipal = false): AssetAttachment
+    {
+        $nombreOriginal = $file->getClientOriginalName();
+        $extension = $file->getClientOriginalExtension();
+        $nombreArchivo = $asset->codigo . '_' . time() . '_' . uniqid() . '.' . $extension;
+
+        $ruta = $file->storeAs('assets/' . $asset->id, $nombreArchivo, 'public');
+
+        // Si es foto principal, desmarcar otras fotos principales
+        if ($esPrincipal && $tipo === 'foto') {
+            $asset->attachments()->where('tipo', 'foto')->update(['es_principal' => false]);
+        }
+
+        return AssetAttachment::create([
+            'asset_id' => $asset->id,
+            'tipo' => $tipo,
+            'nombre_original' => $nombreOriginal,
+            'nombre_archivo' => $nombreArchivo,
+            'ruta' => $ruta,
+            'mime_type' => $file->getMimeType(),
+            'tamano' => $file->getSize(),
+            'es_principal' => $esPrincipal,
+            'usuario_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Subir archivo adjunto a un activo existente
+     */
+    public function uploadAttachment(Request $request, Asset $asset)
+    {
+        $validated = $request->validate([
+            'archivo' => 'required|file|max:10240',
+            'tipo' => 'required|in:foto,factura,orden_compra,garantia,manual,otro',
+            'descripcion' => 'nullable|string|max:500',
+            'es_principal' => 'nullable|boolean',
+        ]);
+
+        try {
+            $attachment = $this->guardarArchivo(
+                $asset,
+                $request->file('archivo'),
+                $validated['tipo'],
+                $validated['es_principal'] ?? false
+            );
+
+            if (!empty($validated['descripcion'])) {
+                $attachment->update(['descripcion' => $validated['descripcion']]);
+            }
+
+            return response()->json([
+                'mensaje' => 'Archivo subido exitosamente',
+                'attachment' => $attachment,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al subir archivo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Eliminar archivo adjunto
+     */
+    public function deleteAttachment(Asset $asset, AssetAttachment $attachment)
+    {
+        if ($attachment->asset_id !== $asset->id) {
+            return response()->json(['error' => 'El archivo no pertenece a este activo'], 403);
+        }
+
+        try {
+            Storage::disk('public')->delete($attachment->ruta);
+            $attachment->delete();
+
+            return response()->json(['mensaje' => 'Archivo eliminado exitosamente']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al eliminar archivo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Registrar venta de activo
+     */
+    public function sellAsset(Request $request, Asset $asset)
+    {
+        $validated = $request->validate([
+            'tipo_venta' => 'required|in:directa,subasta,licitacion',
+            'tipo_pago' => 'required|in:efectivo,transferencia,cheque,tarjeta,otro',
+            'condicion_pago' => 'required|in:contado,credito_30,credito_60,credito_90',
+            'precio_venta' => 'required|numeric|min:0',
+            'comprador_nombre' => 'required|string|max:255',
+            'comprador_documento' => 'nullable|string|max:50',
+            'comprador_telefono' => 'nullable|string|max:20',
+            'motivo' => 'nullable|string',
+            'documento_venta' => 'nullable|file|max:10240',
+        ]);
+
+        if ($asset->estado === 'vendido') {
+            return response()->json(['error' => 'Este activo ya fue vendido'], 422);
+        }
+
+        try {
+            // Crear movimiento de venta
+            $movimiento = AssetMovement::create([
+                'asset_id' => $asset->id,
+                'ubicacion_anterior_id' => $asset->ubicacion_id,
+                'ubicacion_nueva_id' => $asset->ubicacion_id, // se mantiene
+                'responsable_anterior_id' => $asset->responsable_id,
+                'responsable_nuevo_id' => null,
+                'tipo' => 'venta',
+                'tipo_venta' => $validated['tipo_venta'],
+                'tipo_pago' => $validated['tipo_pago'],
+                'condicion_pago' => $validated['condicion_pago'],
+                'precio_venta' => $validated['precio_venta'],
+                'comprador_nombre' => $validated['comprador_nombre'],
+                'comprador_documento' => $validated['comprador_documento'] ?? null,
+                'comprador_telefono' => $validated['comprador_telefono'] ?? null,
+                'motivo' => $validated['motivo'] ?? 'Venta de activo',
+                'usuario_id' => auth()->id(),
+            ]);
+
+            // Guardar documento de venta si se adjuntó
+            if ($request->hasFile('documento_venta')) {
+                $file = $request->file('documento_venta');
+                $ruta = $file->storeAs('ventas/' . $asset->id, 'venta_' . time() . '.' . $file->getClientOriginalExtension(), 'public');
+                $movimiento->update(['documento_venta' => $ruta]);
+            }
+
+            // Actualizar estado del activo
+            $asset->update([
+                'estado' => 'vendido',
+                'responsable_id' => null,
+            ]);
+
+            // Disparar evento
+            AssetDisposed::dispatch($asset, 'venta');
+
+            return response()->json([
+                'mensaje' => 'Activo vendido exitosamente',
+                'movimiento' => $movimiento->load(['asset', 'usuario']),
+                'activo' => $asset->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al registrar venta: ' . $e->getMessage()], 500);
+        }
     }
 }
