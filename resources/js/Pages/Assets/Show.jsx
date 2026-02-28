@@ -144,11 +144,11 @@ export default function ShowAsset({ user, assetId }) {
             <Toast ref={toast} />
 
             {/* Encabezado */}
-            <Card className="m-4">
-                <div className="flex justify-content-between align-items-start">
-                    <div className="flex gap-4">
+            <Card className="m-2 md:m-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                    <div className="flex flex-col md:flex-row gap-4">
                         {/* Foto principal */}
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 mx-auto md:mx-0">
                             {asset.foto_principal?.url ? (
                                 <Image
                                     src={asset.foto_principal.url}
@@ -168,14 +168,14 @@ export default function ShowAsset({ user, assetId }) {
                         </div>
 
                         {/* Info básica */}
-                        <div>
-                            <div className="flex align-items-center gap-2 mb-2">
-                                <h1 className="text-2xl font-bold m-0">{asset.nombre}</h1>
+                        <div className="text-center md:text-left">
+                            <div className="flex flex-col md:flex-row items-center gap-2 mb-2">
+                                <h1 className="text-xl md:text-2xl font-bold m-0">{asset.nombre}</h1>
                                 <Tag value={asset.estado} severity={getEstadoSeverity(asset.estado)} />
                             </div>
                             <p className="text-lg text-gray-600 m-0">{asset.codigo}</p>
                             {asset.descripcion && <p className="mt-2">{asset.descripcion}</p>}
-                            <div className="flex gap-4 mt-3 text-sm">
+                            <div className="flex flex-col md:flex-row gap-2 md:gap-4 mt-3 text-sm">
                                 <span><strong>Marca:</strong> {asset.marca || '-'}</span>
                                 <span><strong>Modelo:</strong> {asset.modelo || '-'}</span>
                                 <span><strong>Serie:</strong> {asset.serie || '-'}</span>
@@ -186,23 +186,26 @@ export default function ShowAsset({ user, assetId }) {
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap justify-center md:justify-end gap-2">
                         <Button
                             label="Editar"
                             icon="pi pi-pencil"
                             severity="warning"
+                            className="flex-1 md:flex-none"
                             onClick={() => router.visit(`/assets/${asset.id}/edit`)}
                         />
                         <Button
                             label="QR"
                             icon="pi pi-qrcode"
                             severity="secondary"
+                            className="flex-1 md:flex-none"
                             onClick={() => window.open(`/api/assets/${asset.id}/qr`, '_blank')}
                         />
                         <Button
                             label="Volver"
                             icon="pi pi-arrow-left"
                             outlined
+                            className="flex-1 md:flex-none"
                             onClick={() => router.visit('/assets')}
                         />
                     </div>
@@ -210,11 +213,11 @@ export default function ShowAsset({ user, assetId }) {
             </Card>
 
             {/* Pestañas */}
-            <Card className="m-4">
+            <Card className="m-2 md:m-4">
                 <TabView>
                     {/* ═══════════════ INFORMACIÓN GENERAL ═══════════════ */}
-                    <TabPanel header="Información General" leftIcon="pi pi-info-circle mr-2">
-                        <div className="grid grid-cols-3 gap-4">
+                    <TabPanel header="Info" leftIcon="pi pi-info-circle mr-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div className="p-3 surface-100 border-round">
                                 <p className="text-sm text-gray-500 m-0">Categoría</p>
                                 <p className="font-semibold m-0">{asset.categoria?.nombre || '-'}</p>
@@ -264,7 +267,7 @@ export default function ShowAsset({ user, assetId }) {
                             <>
                                 <Divider />
                                 <h3 className="mb-3">Propiedades Adicionales</h3>
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {asset.custom_values.map(cv => (
                                         <div key={cv.id} className="p-3 surface-100 border-round">
                                             <p className="text-sm text-gray-500 m-0">{cv.property?.etiqueta}</p>
@@ -278,31 +281,31 @@ export default function ShowAsset({ user, assetId }) {
 
                     {/* ═══════════════ DEPRECIACIÓN ═══════════════ */}
                     <TabPanel header="Depreciación" leftIcon="pi pi-chart-line mr-2">
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Panel izquierdo: valores */}
                             <div>
-                                <h3 className="mb-3">Valores</h3>
-                                <div className="grid grid-cols-2 gap-3">
+                                <h3 className="mb-3 text-lg">Valores</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div className="p-3 surface-100 border-round">
                                         <p className="text-sm text-gray-500 m-0">Valor de Compra</p>
-                                        <p className="text-xl font-bold m-0 text-primary">{formatCurrency(asset.valor_compra)}</p>
+                                        <p className="text-lg md:text-xl font-bold m-0 text-primary">{formatCurrency(asset.valor_compra)}</p>
                                     </div>
                                     <div className="p-3 surface-100 border-round">
                                         <p className="text-sm text-gray-500 m-0">Valor Residual</p>
-                                        <p className="text-xl font-bold m-0">{formatCurrency(asset.valor_residual)}</p>
+                                        <p className="text-lg md:text-xl font-bold m-0">{formatCurrency(asset.valor_residual)}</p>
                                     </div>
                                     <div className="p-3 surface-100 border-round">
                                         <p className="text-sm text-gray-500 m-0">Depreciación Acumulada</p>
-                                        <p className="text-xl font-bold m-0 text-orange-500">{formatCurrency(depInfo.depreciacion_acumulada)}</p>
+                                        <p className="text-lg md:text-xl font-bold m-0 text-orange-500">{formatCurrency(depInfo.depreciacion_acumulada)}</p>
                                     </div>
                                     <div className="p-3 surface-100 border-round">
                                         <p className="text-sm text-gray-500 m-0">Valor en Libros</p>
-                                        <p className="text-xl font-bold m-0 text-green-500">{formatCurrency(depInfo.valor_en_libros)}</p>
+                                        <p className="text-lg md:text-xl font-bold m-0 text-green-500">{formatCurrency(depInfo.valor_en_libros)}</p>
                                     </div>
                                 </div>
 
-                                <h3 className="mt-4 mb-3">Configuración</h3>
-                                <div className="grid grid-cols-2 gap-3">
+                                <h3 className="mt-4 mb-3 text-lg">Configuración</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div className="p-3 surface-100 border-round">
                                         <p className="text-sm text-gray-500 m-0">Método</p>
                                         <p className="font-semibold m-0 capitalize">{asset.metodo_depreciacion || 'Lineal'}</p>

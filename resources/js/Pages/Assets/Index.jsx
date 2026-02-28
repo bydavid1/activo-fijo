@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Card } from 'primereact/card';
@@ -14,7 +14,7 @@ import { Divider } from 'primereact/divider';
 import { Toast } from 'primereact/toast';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { useRef } from 'react';
+import { Menu } from 'primereact/menu';
 import AppLayout from '@/Layouts/AppLayout';
 import axios from 'axios';
 
@@ -585,61 +585,95 @@ const Assets = ({ user }) => {
         }
     };
 
+    const menuRef = useRef(null);
+    const [menuAsset, setMenuAsset] = useState(null);
+
+    const getMenuItems = (asset) => {
+        const items = [
+            {
+                label: 'Ver Detalle',
+                icon: 'pi pi-eye',
+                command: () => window.location.href = `/assets/${asset.id}`
+            },
+            {
+                label: 'Editar',
+                icon: 'pi pi-pencil',
+                command: () => handleOpenDialog(asset)
+            },
+            {
+                label: 'Ver QR / Códigos',
+                icon: 'pi pi-qrcode',
+                command: () => handleShowQr(asset)
+            },
+            { separator: true }
+        ];
+
+        if (asset.estado === 'activo') {
+            items.push(
+                {
+                    label: 'Vender',
+                    icon: 'pi pi-shopping-cart',
+                    command: () => handleOpenSell(asset)
+                },
+                {
+                    label: 'Dar de Baja',
+                    icon: 'pi pi-ban',
+                    command: () => handleOpenDispose(asset)
+                },
+                {
+                    label: 'Revalorizar',
+                    icon: 'pi pi-dollar',
+                    command: () => handleOpenRevalue(asset)
+                },
+                { separator: true }
+            );
+        }
+
+        items.push({
+            label: 'Eliminar',
+            icon: 'pi pi-trash',
+            className: 'text-red-500',
+            command: () => handleDeleteAsset(asset)
+        });
+
+        return items;
+    };
+
     const actionBodyTemplate = (rowData) => {
         return (
-            <div className="flex gap-1">
+            <div className="flex gap-1 items-center">
+                {/* Botón principal: Ver */}
                 <Button
                     icon="pi pi-eye"
-                    className="p-button-rounded p-button-info p-button-sm"
+                    className="p-button-info p-button-sm"
                     onClick={() => window.location.href = `/assets/${rowData.id}`}
-                    tooltip="Ver Detalle"
-                    tooltipPosition="top"
+                    tooltip="Ver"
+                    tooltipOptions={{ position: 'top' }}
                 />
+                {/* Botón editar */}
                 <Button
                     icon="pi pi-pencil"
-                    className="p-button-rounded p-button-warning p-button-sm"
+                    className="p-button-warning p-button-sm"
                     onClick={() => handleOpenDialog(rowData)}
                     tooltip="Editar"
-                    tooltipPosition="top"
+                    tooltipOptions={{ position: 'top' }}
+                />
+                {/* Menú de más opciones */}
+                <Menu
+                    model={getMenuItems(menuAsset || rowData)}
+                    popup
+                    ref={menuRef}
+                    popupAlignment="right"
                 />
                 <Button
-                    icon="pi pi-qrcode"
-                    className="p-button-rounded p-button-secondary p-button-sm"
-                    onClick={() => handleShowQr(rowData)}
-                    tooltip="Ver QR"
-                    tooltipPosition="top"
-                />
-                {rowData.estado === 'activo' && (
-                    <>
-                        <Button
-                            icon="pi pi-shopping-cart"
-                            className="p-button-rounded p-button-success p-button-sm"
-                            onClick={() => handleOpenSell(rowData)}
-                            tooltip="Vender"
-                            tooltipPosition="top"
-                        />
-                        <Button
-                            icon="pi pi-ban"
-                            className="p-button-rounded p-button-secondary p-button-sm"
-                            onClick={() => handleOpenDispose(rowData)}
-                            tooltip="Dar de Baja"
-                            tooltipPosition="top"
-                        />
-                        <Button
-                            icon="pi pi-dollar"
-                            className="p-button-rounded p-button-help p-button-sm"
-                            onClick={() => handleOpenRevalue(rowData)}
-                            tooltip="Revalorizar"
-                            tooltipPosition="top"
-                        />
-                    </>
-                )}
-                <Button
-                    icon="pi pi-trash"
-                    className="p-button-rounded p-button-danger p-button-sm"
-                    onClick={() => handleDeleteAsset(rowData)}
-                    tooltip="Eliminar"
-                    tooltipPosition="top"
+                    icon="pi pi-ellipsis-v"
+                    className="p-button-secondary p-button-sm"
+                    onClick={(e) => {
+                        setMenuAsset(rowData);
+                        menuRef.current.toggle(e);
+                    }}
+                    tooltip="Más opciones"
+                    tooltipOptions={{ position: 'top' }}
                 />
             </div>
         );
@@ -650,13 +684,13 @@ const Assets = ({ user }) => {
             <Toast ref={toast} />
 
             <Card className="bg-white shadow mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h5 className="text-2xl font-bold">Gestión de Activos</h5>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                    <h5 className="text-xl md:text-2xl font-bold">Gestión de Activos</h5>
                     <Button
                         label="Nuevo Activo"
                         icon="pi pi-plus"
                         onClick={() => handleOpenDialog()}
-                        className="p-button-success"
+                        className="p-button-success w-full md:w-auto"
                     />
                 </div>
 
@@ -677,33 +711,38 @@ const Assets = ({ user }) => {
                     globalFilter={globalFilter}
                     loading={loading}
                     className="w-full"
-                    striped
+                    stripedRows
+                    scrollable
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
                 >
-                    <Column field="codigo" header="Código" sortable style={{ width: '10%' }} />
-                    <Column field="nombre" header="Nombre" sortable style={{ width: '16%' }} />
-                    <Column field="marca" header="Marca" style={{ width: '8%' }} />
+                    <Column field="codigo" header="Código" sortable style={{ minWidth: '100px' }} />
+                    <Column field="nombre" header="Nombre" sortable style={{ minWidth: '150px' }} />
+                    <Column field="marca" header="Marca" style={{ minWidth: '80px' }} className="hide-on-mobile" />
                     <Column
                         header="Tipo"
-                        style={{ width: '10%' }}
+                        style={{ minWidth: '100px' }}
+                        className="hide-on-mobile"
                         body={(rowData) => rowData.tipo_bien?.nombre || '-'}
                     />
                     <Column
                         header="Categoría"
-                        style={{ width: '10%' }}
+                        style={{ minWidth: '100px' }}
+                        className="hide-on-mobile"
                         body={(rowData) => rowData.categoria?.nombre || '-'}
                     />
                     <Column
                         field="valor_compra"
                         header="Valor"
-                        style={{ width: '12%' }}
+                        style={{ minWidth: '100px' }}
                         body={(rowData) => `$${rowData.valor_compra?.toLocaleString('es-CO') || 0}`}
                     />
                     <Column
                         field="estado"
                         header="Estado"
-                        style={{ width: '10%' }}
+                        style={{ minWidth: '90px' }}
                         body={(rowData) => (
-                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                 rowData.estado === 'activo' ? 'bg-green-100 text-green-800' :
                                 rowData.estado === 'mantenimiento' ? 'bg-yellow-100 text-yellow-800' :
                                 rowData.estado === 'baja' ? 'bg-red-100 text-red-800' :
@@ -716,7 +755,7 @@ const Assets = ({ user }) => {
                     <Column
                         body={actionBodyTemplate}
                         header="Acciones"
-                        style={{ width: '18%' }}
+                        style={{ minWidth: '100px' }}
                         frozen
                         alignFrozen="right"
                     />
@@ -726,13 +765,13 @@ const Assets = ({ user }) => {
             {/* Dialog for Create/Edit */}
             <Dialog
                 visible={displayDialog}
-                style={{ width: '60vw' }}
+                style={{ width: '90vw', maxWidth: '900px' }}
                 header={editingAsset ? 'Editar Activo' : 'Crear Nuevo Activo'}
                 modal
                 className="p-fluid"
                 onHide={() => setDisplayDialog(false)}
             >
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className="block text-sm font-semibold mb-2">Código</label>
                         <InputText
@@ -965,7 +1004,7 @@ const Assets = ({ user }) => {
             {/* Dispose Dialog */}
             <Dialog
                 visible={displayDisposeDialog}
-                style={{ width: '35vw' }}
+                style={{ width: '90vw', maxWidth: '500px' }}
                 header={`Dar de Baja: ${disposeAsset?.nombre || ''}`}
                 modal
                 className="p-fluid"
@@ -1022,7 +1061,7 @@ const Assets = ({ user }) => {
             {/* Revalue Dialog */}
             <Dialog
                 visible={displayRevalueDialog}
-                style={{ width: '35vw' }}
+                style={{ width: '90vw', maxWidth: '500px' }}
                 header={`Revalorizar: ${revalueAsset?.nombre || ''}`}
                 modal
                 className="p-fluid"
@@ -1191,12 +1230,12 @@ const Assets = ({ user }) => {
             {/* Sell Dialog */}
             <Dialog
                 visible={displaySellDialog}
-                style={{ width: '50vw' }}
+                style={{ width: '90vw', maxWidth: '700px' }}
                 header={`Vender Activo: ${sellAsset?.codigo || ''} - ${sellAsset?.nombre || ''}`}
                 modal
                 onHide={() => setDisplaySellDialog(false)}
             >
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-semibold mb-2">Tipo de Venta *</label>
                         <Dropdown

@@ -161,13 +161,13 @@ const Maintenance = ({ user }) => {
             <Toast ref={toast} />
 
             <Card className="bg-white shadow mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h5 className="text-2xl font-bold">Órdenes de Mantenimiento</h5>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                    <h5 className="text-xl md:text-2xl font-bold">Órdenes de Mantenimiento</h5>
                     <Button
                         label="Nueva Orden"
                         icon="pi pi-plus"
                         onClick={() => handleOpenDialog()}
-                        className="p-button-success"
+                        className="p-button-success w-full md:w-auto"
                     />
                 </div>
 
@@ -177,28 +177,33 @@ const Maintenance = ({ user }) => {
                     rows={10}
                     loading={loading}
                     className="w-full"
-                    striped
+                    stripedRows
+                    scrollable
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
                 >
-                    <Column field="numero" header="Número" sortable style={{ width: '12%' }} />
-                    <Column field="asset_id" header="Asset ID" style={{ width: '10%' }} />
-                    <Column field="tipo" header="Tipo" style={{ width: '12%' }} />
-                    <Column field="descripcion" header="Descripción" style={{ width: '28%' }} />
+                    <Column field="numero" header="Número" sortable style={{ minWidth: '100px' }} />
+                    <Column field="asset_id" header="Asset ID" style={{ minWidth: '80px' }} className="hide-on-mobile" />
+                    <Column field="tipo" header="Tipo" style={{ minWidth: '100px' }} />
+                    <Column field="descripcion" header="Descripción" style={{ minWidth: '150px' }} className="hide-on-mobile" />
                     <Column
                         field="costo_estimado"
-                        header="Costo Estimado"
-                        style={{ width: '12%' }}
+                        header="Costo"
+                        style={{ minWidth: '100px' }}
                         body={(rowData) => `$${rowData.costo_estimado?.toLocaleString('es-CO') || 0}`}
                     />
                     <Column
                         field="estado"
                         header="Estado"
                         body={statusBodyTemplate}
-                        style={{ width: '12%' }}
+                        style={{ minWidth: '100px' }}
                     />
                     <Column
                         body={actionBodyTemplate}
                         header="Acciones"
-                        style={{ width: '12%' }}
+                        style={{ minWidth: '100px' }}
+                        frozen
+                        alignFrozen="right"
                     />
                 </DataTable>
             </Card>
@@ -206,13 +211,13 @@ const Maintenance = ({ user }) => {
             {/* Dialog for Create/Edit */}
             <Dialog
                 visible={displayDialog}
-                style={{ width: '50vw' }}
+                style={{ width: '90vw', maxWidth: '700px' }}
                 header={editingOrder ? 'Editar Orden' : 'Crear Nueva Orden'}
                 modal
                 className="p-fluid"
                 onHide={() => setDisplayDialog(false)}
             >
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-semibold mb-2">Tipo</label>
                         <Dropdown
@@ -284,23 +289,32 @@ const Maintenance = ({ user }) => {
             {/* History Dialog */}
             <Dialog
                 visible={displayHistory}
-                style={{ width: '60vw' }}
+                style={{ width: '90vw', maxWidth: '700px' }}
                 header="Historial de Cambios"
                 modal
                 onHide={() => setDisplayHistory(false)}
             >
-                <DataTable value={history} className="w-full">
+                <DataTable
+                    value={history}
+                    className="w-full"
+                    scrollable
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
+                >
                     <Column
                         field="estado_anterior"
                         header="Estado Anterior"
+                        style={{ minWidth: '120px' }}
                     />
                     <Column
                         field="estado_nuevo"
                         header="Estado Nuevo"
+                        style={{ minWidth: '120px' }}
                     />
                     <Column
                         field="created_at"
                         header="Fecha"
+                        style={{ minWidth: '150px' }}
                         body={(rowData) => new Date(rowData.created_at).toLocaleString('es-CO')}
                     />
                 </DataTable>

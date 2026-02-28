@@ -325,22 +325,24 @@ export default function Index({ user }) {
     };
 
     const header = (
-        <div className="flex justify-content-between align-items-center">
-            <h2 className="m-0">Levantamientos de Inventario</h2>
-            <div className="flex gap-2">
-                <span className="p-input-icon-left">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+            <h2 className="m-0 text-xl md:text-2xl font-bold">Levantamientos de Inventario</h2>
+            <div className="flex flex-col md:flex-row gap-2">
+                <span className="p-input-icon-left w-full md:w-auto">
                     <i className="pi pi-search" />
                     <InputText
                         type="search"
                         value={globalFilter}
                         onChange={(e) => setGlobalFilter(e.target.value)}
                         placeholder="Buscar..."
+                        className="w-full"
                     />
                 </span>
                 <Button
                     label="Nuevo Levantamiento"
                     icon="pi pi-plus"
                     onClick={openNew}
+                    className="w-full md:w-auto"
                 />
             </div>
         </div>
@@ -382,96 +384,122 @@ export default function Index({ user }) {
                     rows={15}
                     rowsPerPageOptions={[10, 15, 25, 50]}
                     className="p-datatable-gridlines"
+                    scrollable
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
                 >
-                    <Column field="codigo" header="Código" sortable style={{ minWidth: '120px' }} />
-                    <Column field="nombre" header="Nombre" sortable style={{ minWidth: '200px' }} />
-                    <Column field="descripcion" header="Descripción" style={{ minWidth: '200px' }} />
-                    <Column field="estado" header="Estado" body={estadoBodyTemplate} sortable style={{ minWidth: '120px' }} />
-                    <Column field="total_activos_esperados" header="Activos" sortable style={{ minWidth: '100px' }} />
-                    <Column header="Progreso" body={progresoBodyTemplate} style={{ minWidth: '150px' }} />
-                    <Column field="created_at" header="Fecha" body={fechaBodyTemplate} sortable style={{ minWidth: '150px' }} />
-                    <Column header="Acciones" body={actionBodyTemplate} style={{ minWidth: '120px' }} />
+                    <Column field="codigo" header="Código" sortable style={{ minWidth: '100px' }} />
+                    <Column field="nombre" header="Nombre" sortable style={{ minWidth: '150px' }} />
+                    <Column field="descripcion" header="Descripción" style={{ minWidth: '150px' }} className="hide-on-mobile" />
+                    <Column field="estado" header="Estado" body={estadoBodyTemplate} sortable style={{ minWidth: '100px' }} />
+                    <Column field="total_activos_esperados" header="Activos" sortable style={{ minWidth: '80px' }} className="hide-on-mobile" />
+                    <Column header="Progreso" body={progresoBodyTemplate} style={{ minWidth: '120px' }} className="hide-on-mobile" />
+                    <Column field="created_at" header="Fecha" body={fechaBodyTemplate} sortable style={{ minWidth: '100px' }} />
+                    <Column header="Acciones" body={actionBodyTemplate} style={{ minWidth: '100px' }} frozen alignFrozen="right" />
                 </DataTable>
             </div>
 
             <Dialog
                 visible={showDialog}
-                style={{ width: '600px' }}
+                style={{ width: '90vw', maxWidth: '550px' }}
                 header="Nuevo Levantamiento de Inventario"
                 modal
                 footer={dialogFooter}
                 onHide={hideDialog}
             >
-                <div className="p-fluid grid formgrid">
-                    <div className="field col-12">
-                        <label htmlFor="nombre">Nombre *</label>
+                <div className="flex flex-col gap-4">
+                    {/* Nombre */}
+                    <div>
+                        <label htmlFor="nombre" className="block text-sm font-medium mb-2">
+                            Nombre <span className="text-red-500">*</span>
+                        </label>
                         <InputText
                             id="nombre"
                             value={formData.nombre}
                             onChange={(e) => handleInputChange('nombre', e.target.value)}
                             required
-                            className={!formData.nombre ? 'p-invalid' : ''}
+                            className={`w-full ${!formData.nombre ? 'p-invalid' : ''}`}
+                            placeholder="Ej: Inventario Enero 2026"
                         />
                     </div>
 
-                    <div className="field col-12">
-                        <label htmlFor="descripcion">Descripción</label>
+                    {/* Descripción */}
+                    <div>
+                        <label htmlFor="descripcion" className="block text-sm font-medium mb-2">
+                            Descripción
+                        </label>
                         <InputTextarea
                             id="descripcion"
                             value={formData.descripcion}
                             onChange={(e) => handleInputChange('descripcion', e.target.value)}
                             rows={3}
+                            className="w-full"
+                            placeholder="Descripción opcional del levantamiento..."
                         />
                     </div>
 
-                    <div className="field col-12">
-                        <label>Criterios de Selección</label>
-                        <small className="p-error d-block mb-2">
-                            Los activos del levantamiento se filtrarán según los criterios seleccionados.
-                            Si no selecciona ningún criterio, se incluirán todos los activos.
-                        </small>
-                    </div>
+                    {/* Criterios de Selección */}
+                    <div className="border-t pt-4">
+                        <h4 className="text-sm font-semibold mb-1">Criterios de Selección</h4>
+                        <p className="text-xs text-gray-500 mb-4">
+                            Filtra los activos por categoría, ubicación o responsable. Si no seleccionas ningún criterio, se incluirán todos los activos.
+                        </p>
 
-                    <div className="field col-12 md:col-4">
-                        <label htmlFor="categorias">Categorías</label>
-                        <MultiSelect
-                            id="categorias"
-                            value={formData.criterios.category_ids}
-                            onChange={(e) => handleInputChange('criterios.category_ids', e.value)}
-                            options={options.categorias}
-                            optionLabel="nombre"
-                            optionValue="id"
-                            placeholder="Seleccionar categorías"
-                            display="chip"
-                        />
-                    </div>
+                        <div className="grid grid-cols-1 gap-4">
+                            {/* Categorías */}
+                            <div>
+                                <label htmlFor="categorias" className="block text-sm font-medium mb-2">
+                                    Categorías
+                                </label>
+                                <MultiSelect
+                                    id="categorias"
+                                    value={formData.criterios.category_ids}
+                                    onChange={(e) => handleInputChange('criterios.category_ids', e.value)}
+                                    options={options.categorias}
+                                    optionLabel="nombre"
+                                    optionValue="id"
+                                    placeholder="Seleccionar categorías"
+                                    display="chip"
+                                    className="w-full"
+                                />
+                            </div>
 
-                    <div className="field col-12 md:col-4">
-                        <label htmlFor="ubicaciones">Ubicaciones</label>
-                        <MultiSelect
-                            id="ubicaciones"
-                            value={formData.criterios.location_ids}
-                            onChange={(e) => handleInputChange('criterios.location_ids', e.value)}
-                            options={options.ubicaciones}
-                            optionLabel="nombre"
-                            optionValue="id"
-                            placeholder="Seleccionar ubicaciones"
-                            display="chip"
-                        />
-                    </div>
+                            {/* Ubicaciones */}
+                            <div>
+                                <label htmlFor="ubicaciones" className="block text-sm font-medium mb-2">
+                                    Ubicaciones
+                                </label>
+                                <MultiSelect
+                                    id="ubicaciones"
+                                    value={formData.criterios.location_ids}
+                                    onChange={(e) => handleInputChange('criterios.location_ids', e.value)}
+                                    options={options.ubicaciones}
+                                    optionLabel="nombre"
+                                    optionValue="id"
+                                    placeholder="Seleccionar ubicaciones"
+                                    display="chip"
+                                    className="w-full"
+                                />
+                            </div>
 
-                    <div className="field col-12 md:col-4">
-                        <label htmlFor="responsables">Responsables</label>
-                        <MultiSelect
-                            id="responsables"
-                            value={formData.criterios.employee_ids}
-                            onChange={(e) => handleInputChange('criterios.employee_ids', e.value)}
-                            options={options.responsables}
-                            optionLabel="nombre"
-                            optionValue="id"
-                            placeholder="Seleccionar responsables"
-                            display="chip"
-                        />
+                            {/* Responsables */}
+                            <div>
+                                <label htmlFor="responsables" className="block text-sm font-medium mb-2">
+                                    Responsables
+                                </label>
+                                <MultiSelect
+                                    id="responsables"
+                                    value={formData.criterios.employee_ids}
+                                    onChange={(e) => handleInputChange('criterios.employee_ids', e.value)}
+                                    options={options.responsables}
+                                    optionLabel="nombre"
+                                    optionValue="id"
+                                    placeholder="Seleccionar responsables"
+                                    display="chip"
+                                    className="w-full"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </Dialog>

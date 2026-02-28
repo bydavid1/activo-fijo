@@ -115,13 +115,13 @@ const Movements = ({ user }) => {
             <Toast ref={toast} />
 
             <Card className="bg-white shadow mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h5 className="text-2xl font-bold">Movimientos de Activos</h5>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                    <h5 className="text-xl md:text-2xl font-bold">Movimientos de Activos</h5>
                     <Button
                         label="Registrar Movimiento"
                         icon="pi pi-plus"
                         onClick={handleOpenDialog}
-                        className="p-button-success"
+                        className="p-button-success w-full md:w-auto"
                     />
                 </div>
 
@@ -142,49 +142,55 @@ const Movements = ({ user }) => {
                     globalFilter={globalFilter}
                     loading={loading}
                     className="w-full"
-                    striped
+                    stripedRows
+                    scrollable
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
                 >
                     <Column
                         field="asset.codigo"
-                        header="Código Activo"
+                        header="Código"
                         sortable
-                        style={{ width: '12%' }}
+                        style={{ minWidth: '100px' }}
                         body={(rowData) => rowData.asset?.codigo || '-'}
                     />
                     <Column
                         field="asset.nombre"
                         header="Activo"
-                        style={{ width: '15%' }}
+                        style={{ minWidth: '150px' }}
                         body={(rowData) => rowData.asset?.nombre || '-'}
                     />
                     <Column
                         field="tipo"
                         header="Tipo"
                         body={typeTemplate}
-                        style={{ width: '12%' }}
+                        style={{ minWidth: '100px' }}
                     />
                     <Column
                         field="ubicacion_anterior"
-                        header="Ubicación Anterior"
-                        style={{ width: '13%' }}
+                        header="Ubic. Anterior"
+                        style={{ minWidth: '120px' }}
+                        className="hide-on-mobile"
                         body={(rowData) => rowData.ubicacion_anterior?.nombre || '-'}
                     />
                     <Column
                         field="ubicacion_nueva"
-                        header="Ubicación Nueva"
-                        style={{ width: '13%' }}
+                        header="Ubic. Nueva"
+                        style={{ minWidth: '120px' }}
+                        className="hide-on-mobile"
                         body={(rowData) => rowData.ubicacion_nueva?.nombre || '-'}
                     />
                     <Column
                         field="responsable_nuevo"
-                        header="Responsable Nuevo"
-                        style={{ width: '15%' }}
+                        header="Responsable"
+                        style={{ minWidth: '120px' }}
+                        className="hide-on-mobile"
                         body={(rowData) => rowData.responsable_nuevo?.nombre || '-'}
                     />
                     <Column
                         field="fecha_movimiento"
                         header="Fecha"
-                        style={{ width: '12%' }}
+                        style={{ minWidth: '100px' }}
                         body={(rowData) => rowData.fecha_movimiento ? new Date(rowData.fecha_movimiento).toLocaleDateString('es-CO') : '-'}
                     />
                 </DataTable>
@@ -193,14 +199,14 @@ const Movements = ({ user }) => {
             {/* Dialog for Register Movement */}
             <Dialog
                 visible={displayDialog}
-                style={{ width: '45vw' }}
+                style={{ width: '90vw', maxWidth: '650px' }}
                 header="Registrar Movimiento"
                 modal
                 className="p-fluid"
                 onHide={() => setDisplayDialog(false)}
             >
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="col-span-1 md:col-span-2">
                         <label className="block text-sm font-semibold mb-2">Activo</label>
                         <Dropdown
                             value={formData.asset_id}

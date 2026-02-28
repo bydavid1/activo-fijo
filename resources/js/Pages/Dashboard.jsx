@@ -61,35 +61,35 @@ const Dashboard = ({ user }) => {
 
     return (
         <AppLayout user={user}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
                 {/* KPI Cards */}
                 <Card className="bg-white shadow">
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600">{stats.totalAssets}</div>
-                        <div className="text-gray-600 mt-2">Activos Totales</div>
+                        <div className="text-xl md:text-3xl font-bold text-blue-600">{stats.totalAssets}</div>
+                        <div className="text-xs md:text-base text-gray-600 mt-1 md:mt-2">Activos Totales</div>
                     </div>
                 </Card>
 
                 <Card className="bg-white shadow">
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-green-600">
+                        <div className="text-xl md:text-3xl font-bold text-green-600">
                             ${(stats.totalValue / 1000000).toFixed(1)}M
                         </div>
-                        <div className="text-gray-600 mt-2">Valor Total</div>
+                        <div className="text-xs md:text-base text-gray-600 mt-1 md:mt-2">Valor Total</div>
                     </div>
                 </Card>
 
                 <Card className="bg-white shadow">
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-orange-600">{stats.activeEmployees}</div>
-                        <div className="text-gray-600 mt-2">Empleados Activos</div>
+                        <div className="text-xl md:text-3xl font-bold text-orange-600">{stats.activeEmployees}</div>
+                        <div className="text-xs md:text-base text-gray-600 mt-1 md:mt-2">Empleados Activos</div>
                     </div>
                 </Card>
 
                 <Card className="bg-white shadow">
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-red-600">{stats.pendingMaintenance}</div>
-                        <div className="text-gray-600 mt-2">Mantenimiento Pendiente</div>
+                        <div className="text-xl md:text-3xl font-bold text-red-600">{stats.pendingMaintenance}</div>
+                        <div className="text-xs md:text-base text-gray-600 mt-1 md:mt-2">Manten. Pendiente</div>
                     </div>
                 </Card>
             </div>
@@ -97,7 +97,7 @@ const Dashboard = ({ user }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Depreciation Chart */}
                 <Card className="bg-white shadow">
-                    <h5 className="text-lg font-bold mb-4">Depreciación Mensual</h5>
+                    <h5 className="text-base md:text-lg font-bold mb-4">Depreciación Mensual</h5>
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={stats.depreciationChart}>
                             <CartesianGrid strokeDasharray="3 3" />

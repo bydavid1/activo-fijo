@@ -32,6 +32,241 @@ body {
     top: 20px;
     right: 20px;
 }
+
+/* ==================== RESPONSIVE GLOBAL ==================== */
+
+/* Tablas responsive - scroll horizontal en móvil */
+@media (max-width: 768px) {
+    .p-datatable-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .p-datatable table {
+        min-width: 800px;
+    }
+
+    .p-datatable .p-datatable-thead > tr > th,
+    .p-datatable .p-datatable-tbody > tr > td {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .p-paginator {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+
+    .p-paginator .p-paginator-current {
+        display: none;
+    }
+}
+
+/* Modales responsive */
+.p-dialog {
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+    margin: 1rem;
+}
+
+@media (max-width: 768px) {
+    .p-dialog {
+        width: 95vw !important;
+        margin: 0.5rem;
+    }
+
+    .p-dialog .p-dialog-content {
+        padding: 1rem;
+        overflow-y: auto;
+        max-height: calc(90vh - 120px);
+    }
+
+    .p-dialog .p-dialog-header {
+        padding: 0.75rem 1rem;
+    }
+
+    .p-dialog .p-dialog-footer {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Formularios responsive - una columna en móvil */
+@media (max-width: 768px) {
+    .grid-cols-2,
+    .grid-cols-3,
+    .grid-cols-4 {
+        grid-template-columns: 1fr !important;
+    }
+
+    .md\:grid-cols-2,
+    .md\:grid-cols-3,
+    .md\:grid-cols-4,
+    .lg\:grid-cols-2,
+    .lg\:grid-cols-3,
+    .lg\:grid-cols-4 {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Dropdowns y selects */
+@media (max-width: 768px) {
+    .p-dropdown-panel,
+    .p-multiselect-panel {
+        max-width: 90vw;
+    }
+
+    .p-dropdown,
+    .p-multiselect,
+    .p-inputtext,
+    .p-calendar {
+        width: 100% !important;
+    }
+}
+
+/* Cards responsive */
+@media (max-width: 768px) {
+    .p-card .p-card-body {
+        padding: 1rem;
+    }
+
+    .p-card .p-card-content {
+        padding: 0;
+    }
+}
+
+/* Botones en móvil */
+@media (max-width: 768px) {
+    .p-button.p-button-icon-only {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+    /* Botones de acción en fila */
+    .flex.gap-2 > .p-button {
+        padding: 0.5rem;
+    }
+}
+
+/* TabView responsive */
+@media (max-width: 768px) {
+    .p-tabview .p-tabview-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .p-tabview .p-tabview-nav li {
+        flex-shrink: 0;
+    }
+
+    .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* FileUpload responsive */
+@media (max-width: 768px) {
+    .p-fileupload .p-fileupload-buttonbar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .p-fileupload .p-fileupload-buttonbar .p-button {
+        width: 100%;
+    }
+}
+
+/* ProgressBar en móvil */
+@media (max-width: 768px) {
+    .p-progressbar {
+        height: 1rem;
+    }
+}
+
+/* Toast en móvil */
+@media (max-width: 768px) {
+    .p-toast {
+        width: calc(100vw - 2rem);
+        right: 1rem;
+        left: 1rem;
+    }
+}
+
+/* Sidebar móvil */
+@media (max-width: 768px) {
+    .p-sidebar {
+        width: 80vw !important;
+        max-width: 300px;
+        padding: 0 !important;
+    }
+
+    .p-sidebar .p-sidebar-header {
+        padding: 0.5rem !important;
+    }
+
+    .p-sidebar .p-sidebar-content {
+        padding: 0 !important;
+        height: 100%;
+    }
+}
+
+/* Títulos responsive */
+@media (max-width: 768px) {
+    h1, .text-3xl {
+        font-size: 1.5rem !important;
+    }
+
+    h2, .text-2xl {
+        font-size: 1.25rem !important;
+    }
+
+    h3, .text-xl {
+        font-size: 1.125rem !important;
+    }
+}
+
+/* Ocultar columnas menos importantes en móvil */
+@media (max-width: 640px) {
+    .p-datatable .hide-on-mobile {
+        display: none !important;
+    }
+
+    /* También ocultar las celdas correspondientes */
+    .p-datatable-thead > tr > th.hide-on-mobile,
+    .p-datatable-tbody > tr > td.hide-on-mobile {
+        display: none !important;
+    }
+
+    /* Hacer los badges de estado más pequeños */
+    .px-2.py-1.rounded-full {
+        padding: 0.15rem 0.4rem !important;
+        font-size: 0.65rem !important;
+    }
+
+    /* Botones de acción más compactos */
+    .p-datatable .p-button-rounded {
+        width: 1.8rem !important;
+        height: 1.8rem !important;
+    }
+
+    .p-datatable .p-button-rounded .p-button-icon {
+        font-size: 0.75rem !important;
+    }
+}
+
+/* Flex direction en móvil */
+@media (max-width: 768px) {
+    .flex-row-mobile-col {
+        flex-direction: column !important;
+    }
+
+    .justify-between {
+        gap: 1rem;
+    }
+}
+
 @source '../**/*.js';
 
 @theme {

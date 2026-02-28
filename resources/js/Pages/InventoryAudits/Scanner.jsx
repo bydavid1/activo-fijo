@@ -181,7 +181,7 @@ export default function Scanner({ user, auditId }) {
     const itemTemplate = (item) => (
         <div
             key={item.id}
-            className={`p-3 mb-2 border-1 border-round cursor-pointer transition-colors ${
+            className={`p-3 mb-2 border rounded-lg cursor-pointer transition-colors ${
                 item.estado === 'found' ? 'bg-green-50 border-green-200' :
                 item.estado === 'pending' ? 'bg-gray-50 border-gray-200' :
                 item.estado === 'discrepant' ? 'bg-orange-50 border-orange-200' :
@@ -189,35 +189,36 @@ export default function Scanner({ user, auditId }) {
             }`}
             onClick={() => verDetalleItem(item)}
         >
-            <div className="flex justify-content-between align-items-center mb-2">
-                <div className="flex align-items-center gap-2">
-                    <Badge
-                        value={item.asset?.codigo || 'N/A'}
-                        className="p-badge-lg"
-                    />
-                    <span className="font-semibold">{item.asset?.nombre || 'Sin nombre'}</span>
+            <div className="flex justify-between items-start mb-2">
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Badge
+                            value={item.asset?.codigo || 'N/A'}
+                            className="text-xs"
+                        />
+                        <span className="font-semibold text-sm truncate">{item.asset?.nombre || 'Sin nombre'}</span>
+                    </div>
                 </div>
 
-                {item.estado === 'found' && (
-                    <i className="pi pi-check-circle text-green-500 text-xl"></i>
-                )}
-                {item.estado === 'discrepant' && (
-                    <i className="pi pi-exclamation-triangle text-orange-500 text-xl"></i>
-                )}
-                {item.estado === 'missing' && (
-                    <i className="pi pi-times-circle text-red-500 text-xl"></i>
-                )}
-            </div>
-
-            <div className="text-sm text-600">
-                <div className="grid grid-cols-2 gap-2">
-                    <div>Categoría: {item.asset?.categoria?.nombre || 'N/A'}</div>
-                    <div>Ubicación: {item.asset?.ubicacion?.nombre || 'N/A'}</div>
-                    <div>Responsable: {item.asset?.responsable?.nombre || 'N/A'}</div>
-                    {item.fecha_escaneado && (
-                        <div>Escaneado: {new Date(item.fecha_escaneado).toLocaleString()}</div>
+                <div className="flex-shrink-0 ml-2">
+                    {item.estado === 'found' && (
+                        <i className="pi pi-check-circle text-green-500 text-lg"></i>
+                    )}
+                    {item.estado === 'discrepant' && (
+                        <i className="pi pi-exclamation-triangle text-orange-500 text-lg"></i>
+                    )}
+                    {item.estado === 'missing' && (
+                        <i className="pi pi-times-circle text-red-500 text-lg"></i>
+                    )}
+                    {item.estado === 'pending' && (
+                        <i className="pi pi-clock text-gray-400 text-lg"></i>
                     )}
                 </div>
+            </div>
+
+            <div className="text-xs text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-1">
+                <div><strong>Ubicación:</strong> {item.asset?.ubicacion?.nombre || 'N/A'}</div>
+                <div><strong>Responsable:</strong> {item.asset?.responsable?.nombre || 'N/A'}</div>
             </div>
         </div>
     );
@@ -252,12 +253,13 @@ export default function Scanner({ user, auditId }) {
 
             {/* Header con información de la auditoría */}
             <Card className="mb-4">
-                <div className="flex justify-content-between align-items-center mb-3">
+                {/* Título y botones */}
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 mb-4">
                     <div>
-                        <h2 className="m-0 mb-2">{auditoria.nombre}</h2>
-                        <div className="flex gap-3 text-sm text-600">
-                            <span>Código: {auditoria.codigo}</span>
-                            <span>•</span>
+                        <h2 className="m-0 mb-2 text-xl md:text-2xl">{auditoria.nombre}</h2>
+                        <div className="flex flex-wrap gap-2 text-sm text-600">
+                            <span>Código: <strong>{auditoria.codigo}</strong></span>
+                            <span className="hidden md:inline">•</span>
                             <span>Estado: <Badge value="En Progreso" severity="warning" /></span>
                         </div>
                     </div>
@@ -266,71 +268,66 @@ export default function Scanner({ user, auditId }) {
                         <Button
                             label="Escanear"
                             icon="pi pi-camera"
-                            className="p-button-lg"
+                            className="flex-1 md:flex-none"
                             onClick={() => setShowScanner(true)}
                             loading={scanning}
                         />
-
                         <Button
                             label="Finalizar"
                             icon="pi pi-check"
                             severity="success"
                             outlined
+                            className="flex-1 md:flex-none"
                             onClick={finalizarLevantamiento}
                         />
                     </div>
                 </div>
 
                 {/* Barra de progreso */}
-                <div className="mb-3">
-                    <div className="flex justify-content-between align-items-center mb-2">
-                        <span className="font-semibold">Progreso del Levantamiento</span>
-                        <span className="text-600">{stats.encontrados}/{stats.total} activos</span>
+                <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="font-semibold text-sm">Progreso</span>
+                        <span className="text-sm text-600">{stats.encontrados}/{stats.total} activos</span>
                     </div>
                     <ProgressBar
                         value={stats.progreso}
-                        style={{ height: '12px' }}
-                        displayValueTemplate={() => `${stats.progreso.toFixed(1)}%`}
+                        style={{ height: '10px' }}
+                        showValue={false}
                     />
+                    <div className="text-center text-xs text-500 mt-1">{stats.progreso.toFixed(1)}%</div>
                 </div>
 
                 {/* Estadísticas rápidas */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <div className="text-center p-2 bg-green-50 border-round">
-                        <div className="text-2xl font-bold text-green-600">{stats.encontrados}</div>
-                        <div className="text-sm text-600">Encontrados</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="text-center p-3 bg-green-50 border-round">
+                        <div className="text-xl md:text-2xl font-bold text-green-600">{stats.encontrados}</div>
+                        <div className="text-xs text-600">Encontrados</div>
                     </div>
-                    <div className="text-center p-2 bg-blue-50 border-round">
-                        <div className="text-2xl font-bold text-blue-600">{stats.pendientes}</div>
-                        <div className="text-sm text-600">Pendientes</div>
+                    <div className="text-center p-3 bg-blue-50 border-round">
+                        <div className="text-xl md:text-2xl font-bold text-blue-600">{stats.pendientes}</div>
+                        <div className="text-xs text-600">Pendientes</div>
                     </div>
-                    <div className="text-center p-2 bg-orange-50 border-round">
-                        <div className="text-2xl font-bold text-orange-600">{stats.discrepantes}</div>
-                        <div className="text-sm text-600">Discrepantes</div>
+                    <div className="text-center p-3 bg-orange-50 border-round">
+                        <div className="text-xl md:text-2xl font-bold text-orange-600">{stats.discrepantes}</div>
+                        <div className="text-xs text-600">Discrepantes</div>
                     </div>
-                    <div className="text-center p-2 bg-red-50 border-round">
-                        <div className="text-2xl font-bold text-red-600">{stats.faltantes}</div>
-                        <div className="text-sm text-600">Faltantes</div>
-                    </div>
-                    <div className="text-center p-2 bg-gray-50 border-round">
-                        <div className="text-2xl font-bold text-gray-600">{stats.total}</div>
-                        <div className="text-sm text-600">Total</div>
+                    <div className="text-center p-3 bg-red-50 border-round">
+                        <div className="text-xl md:text-2xl font-bold text-red-600">{stats.faltantes}</div>
+                        <div className="text-xs text-600">Faltantes</div>
                     </div>
                 </div>
             </Card>
 
             {/* Lista de activos */}
             <Card>
-                <div className="mb-3">
-                    <div className="flex justify-content-between align-items-center mb-3">
-                        <h3 className="m-0">Lista de Activos</h3>
-                        <InputText
-                            placeholder="Buscar por código, nombre o categoría..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-300px"
-                        />
-                    </div>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                    <h3 className="m-0 text-lg">Lista de Activos</h3>
+                    <InputText
+                        placeholder="Buscar por código, nombre..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full md:w-64"
+                    />
                 </div>
 
                 <TabView activeIndex={activeIndex} onTabChange={(e) => setActiveIndex(e.index)}>
@@ -390,7 +387,7 @@ export default function Scanner({ user, auditId }) {
                 visible={showItemDetails}
                 onHide={() => setShowItemDetails(false)}
                 position="right"
-                style={{ width: '400px' }}
+                className="w-full md:w-96"
                 header="Detalles del Activo"
             >
                 {selectedItem && (

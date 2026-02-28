@@ -126,13 +126,13 @@ const Suppliers = ({ user }) => {
             <Toast ref={toast} />
 
             <Card className="bg-white shadow mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h5 className="text-2xl font-bold">Proveedores</h5>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                    <h5 className="text-xl md:text-2xl font-bold">Proveedores</h5>
                     <Button
                         label="Nuevo Proveedor"
                         icon="pi pi-plus"
                         onClick={() => handleOpenDialog()}
-                        className="p-button-success"
+                        className="p-button-success w-full md:w-auto"
                     />
                 </div>
 
@@ -153,18 +153,23 @@ const Suppliers = ({ user }) => {
                     globalFilter={globalFilter}
                     loading={loading}
                     className="w-full"
-                    striped
+                    stripedRows
+                    scrollable
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
                 >
-                    <Column field="codigo" header="Código" sortable style={{ width: '10%' }} />
-                    <Column field="nombre" header="Nombre" sortable style={{ width: '20%' }} />
-                    <Column field="nit" header="NIT" style={{ width: '12%' }} />
-                    <Column field="email" header="Email" style={{ width: '18%' }} />
-                    <Column field="telefono" header="Teléfono" style={{ width: '12%' }} />
-                    <Column field="ciudad" header="Ciudad" style={{ width: '12%' }} />
+                    <Column field="codigo" header="Código" sortable style={{ minWidth: '100px' }} />
+                    <Column field="nombre" header="Nombre" sortable style={{ minWidth: '150px' }} />
+                    <Column field="nit" header="NIT" style={{ minWidth: '100px' }} className="hide-on-mobile" />
+                    <Column field="email" header="Email" style={{ minWidth: '150px' }} className="hide-on-mobile" />
+                    <Column field="telefono" header="Teléfono" style={{ minWidth: '100px' }} />
+                    <Column field="ciudad" header="Ciudad" style={{ minWidth: '100px' }} className="hide-on-mobile" />
                     <Column
                         body={actionBodyTemplate}
                         header="Acciones"
-                        style={{ width: '12%' }}
+                        style={{ minWidth: '100px' }}
+                        frozen
+                        alignFrozen="right"
                     />
                 </DataTable>
             </Card>
@@ -172,13 +177,13 @@ const Suppliers = ({ user }) => {
             {/* Dialog for Create/Edit */}
             <Dialog
                 visible={displayDialog}
-                style={{ width: '50vw' }}
+                style={{ width: '90vw', maxWidth: '700px' }}
                 header={editingSupplier ? 'Editar Proveedor' : 'Crear Nuevo Proveedor'}
                 modal
                 className="p-fluid"
                 onHide={() => setDisplayDialog(false)}
             >
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-semibold mb-2">Código</label>
                         <InputText

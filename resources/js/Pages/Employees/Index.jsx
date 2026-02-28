@@ -128,20 +128,20 @@ const Employees = ({ user }) => {
             <Toast ref={toast} />
 
             <Card className="bg-white shadow mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h5 className="text-2xl font-bold">Gestión de Empleados</h5>
-                    <div className="flex gap-2">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                    <h5 className="text-xl md:text-2xl font-bold">Gestión de Empleados</h5>
+                    <div className="flex flex-col md:flex-row gap-2">
                         <Button
                             label="Sincronizar"
                             icon="pi pi-refresh"
                             onClick={handleSyncEmployees}
-                            className="p-button-info"
+                            className="p-button-info w-full md:w-auto"
                         />
                         <Button
                             label="Nuevo Empleado"
                             icon="pi pi-plus"
                             onClick={() => handleOpenDialog()}
-                            className="p-button-success"
+                            className="p-button-success w-full md:w-auto"
                         />
                     </div>
                 </div>
@@ -163,17 +163,22 @@ const Employees = ({ user }) => {
                     globalFilter={globalFilter}
                     loading={loading}
                     className="w-full"
-                    striped
+                    stripedRows
+                    scrollable
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
                 >
-                    <Column field="codigo" header="Código" sortable style={{ width: '12%' }} />
-                    <Column field="nombre" header="Nombre" sortable style={{ width: '20%' }} />
-                    <Column field="email" header="Email" style={{ width: '20%' }} />
-                    <Column field="departamento" header="Departamento" style={{ width: '18%' }} />
-                    <Column field="puesto" header="Puesto" style={{ width: '18%' }} />
+                    <Column field="codigo" header="Código" sortable style={{ minWidth: '100px' }} />
+                    <Column field="nombre" header="Nombre" sortable style={{ minWidth: '150px' }} />
+                    <Column field="email" header="Email" style={{ minWidth: '150px' }} className="hide-on-mobile" />
+                    <Column field="departamento" header="Departamento" style={{ minWidth: '120px' }} className="hide-on-mobile" />
+                    <Column field="puesto" header="Puesto" style={{ minWidth: '120px' }} />
                     <Column
                         body={actionBodyTemplate}
                         header="Acciones"
-                        style={{ width: '12%' }}
+                        style={{ minWidth: '100px' }}
+                        frozen
+                        alignFrozen="right"
                     />
                 </DataTable>
             </Card>
@@ -181,13 +186,13 @@ const Employees = ({ user }) => {
             {/* Dialog for Create/Edit */}
             <Dialog
                 visible={displayDialog}
-                style={{ width: '50vw' }}
+                style={{ width: '90vw', maxWidth: '700px' }}
                 header={editingEmployee ? 'Editar Empleado' : 'Crear Nuevo Empleado'}
                 modal
                 className="p-fluid"
                 onHide={() => setDisplayDialog(false)}
             >
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-semibold mb-2">Código</label>
                         <InputText
@@ -259,18 +264,25 @@ const Employees = ({ user }) => {
             {/* Sync Logs Dialog */}
             <Dialog
                 visible={displaySyncLogs}
-                style={{ width: '70vw' }}
+                style={{ width: '90vw', maxWidth: '800px' }}
                 header="Historial de Sincronización"
                 modal
                 onHide={() => setDisplaySyncLogs(false)}
             >
-                <DataTable value={syncLogs} className="w-full">
-                    <Column field="accion" header="Acción" />
-                    <Column field="estado" header="Estado" />
-                    <Column field="mensaje_error" header="Mensaje" />
+                <DataTable
+                    value={syncLogs}
+                    className="w-full"
+                    scrollable
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
+                >
+                    <Column field="accion" header="Acción" style={{ minWidth: '100px' }} />
+                    <Column field="estado" header="Estado" style={{ minWidth: '80px' }} />
+                    <Column field="mensaje_error" header="Mensaje" style={{ minWidth: '150px' }} />
                     <Column
                         field="created_at"
                         header="Fecha"
+                        style={{ minWidth: '150px' }}
                         body={(rowData) => new Date(rowData.created_at).toLocaleString('es-CO')}
                     />
                 </DataTable>
