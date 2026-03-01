@@ -13,6 +13,7 @@ cmds = ["npm run build"]
 APP_ENV = "production"
 APP_DEBUG = "false"
 APP_URL = "https://activofijo.up.railway.app"
+ASSET_URL = "https://activofijo.up.railway.app"
 SESSION_DOMAIN = "activofijo.up.railway.app"
 SESSION_SECURE_COOKIE = "true"
 CACHE_DRIVER = "file"
