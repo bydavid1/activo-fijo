@@ -21,6 +21,13 @@ Route::get('/', function () {
     ]);
 })->middleware('auth')->name('dashboard');
 
+// ==================== ABOUT / INFO ====================
+Route::get('/about', function () {
+    return Inertia::render('About', [
+        'user' => auth()->user(),
+    ]);
+})->middleware('auth')->name('about');
+
 // ==================== ASSETS ====================
 Route::prefix('assets')->middleware('auth')->name('assets.')->group(function () {
     Route::get('/', function () {

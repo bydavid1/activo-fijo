@@ -132,6 +132,11 @@ export default function AppLayout({ children, user }) {
             icon: 'pi pi-chart-bar',
             href: '/reports',
         },
+        {
+            label: 'Información',
+            icon: 'pi pi-info-circle',
+            href: '/about',
+        },
     ];
 
     const handleLogout = () => {
