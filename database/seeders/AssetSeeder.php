@@ -31,7 +31,7 @@ class AssetSeeder extends Seeder
                 'valor_compra' => 3500000,
                 'valor_residual' => 350000,
                 'vida_util_anos' => 5,
-                'fecha_adquisicion' => '2023-01-15',
+                'fecha_adquisicion' => '2025-01-15',
                 'estado' => 'activo',
             ],
             [
@@ -48,7 +48,7 @@ class AssetSeeder extends Seeder
                 'valor_compra' => 2800000,
                 'valor_residual' => 280000,
                 'vida_util_anos' => 4,
-                'fecha_adquisicion' => '2022-06-20',
+                'fecha_adquisicion' => '2025-06-20',
                 'estado' => 'activo',
             ],
             [
@@ -65,7 +65,7 @@ class AssetSeeder extends Seeder
                 'valor_compra' => 85000000,
                 'valor_residual' => 25500000,
                 'vida_util_anos' => 10,
-                'fecha_adquisicion' => '2021-03-10',
+                'fecha_adquisicion' => '2025-03-10',
                 'estado' => 'activo',
             ],
             [
@@ -82,7 +82,7 @@ class AssetSeeder extends Seeder
                 'valor_compra' => 2500000,
                 'valor_residual' => 500000,
                 'vida_util_anos' => 10,
-                'fecha_adquisicion' => '2023-02-14',
+                'fecha_adquisicion' => '2025-02-14',
                 'estado' => 'activo',
             ],
             [
@@ -99,7 +99,7 @@ class AssetSeeder extends Seeder
                 'valor_compra' => 450000,
                 'valor_residual' => 45000,
                 'vida_util_anos' => 5,
-                'fecha_adquisicion' => '2023-05-20',
+                'fecha_adquisicion' => '2025-05-20',
                 'estado' => 'activo',
             ],
             [
@@ -116,7 +116,7 @@ class AssetSeeder extends Seeder
                 'valor_compra' => 1800000,
                 'valor_residual' => 180000,
                 'vida_util_anos' => 5,
-                'fecha_adquisicion' => '2023-03-15',
+                'fecha_adquisicion' => '2024-03-15',
                 'estado' => 'activo',
             ],
             [
@@ -133,7 +133,7 @@ class AssetSeeder extends Seeder
                 'valor_compra' => 25000000,
                 'valor_residual' => 2500000,
                 'vida_util_anos' => 5,
-                'fecha_adquisicion' => '2022-08-01',
+                'fecha_adquisicion' => '2025-08-01',
                 'estado' => 'activo',
             ],
             [
@@ -150,7 +150,7 @@ class AssetSeeder extends Seeder
                 'valor_compra' => 800000,
                 'valor_residual' => 80000,
                 'vida_util_anos' => 10,
-                'fecha_adquisicion' => '2023-04-10',
+                'fecha_adquisicion' => '2025-04-10',
                 'estado' => 'activo',
             ],
         ];
