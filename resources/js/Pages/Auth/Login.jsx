@@ -4,6 +4,7 @@ import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
+import axios from 'axios';
 
 export default function Login() {
     const [email, setEmail] = useState('admin@sistema.com');
@@ -16,7 +17,8 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const response = await window.axios.post('/login', { email, password });
+            const response = await axios.post('/login', { email, password });
+            console.log('Login successful:', response.data);
 
             // Redirect to dashboard
             window.location.href = '/';

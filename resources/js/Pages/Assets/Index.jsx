@@ -15,12 +15,14 @@ import { Toast } from 'primereact/toast';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Menu } from 'primereact/menu';
+import { usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PermissionGate } from '@/Components/PermissionGate';
 import { usePermissions } from '@/Composables/usePermissions';
 import axios from 'axios';
 
 const Assets = () => {
+    const { user } = usePage().props;
     const { hasPermission } = usePermissions();
     const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
