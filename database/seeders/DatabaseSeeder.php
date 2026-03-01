@@ -24,12 +24,24 @@ class DatabaseSeeder extends Seeder
 
         // Seeders del sistema de activo fijo
         $this->call([
+            // Datos base (requeridos para otros seeders)
             AssetCategorySeeder::class,
             AssetLocationSeeder::class,
             SupplierSeeder::class,
             EmployeeSeeder::class,
             AssetTypeSeeder::class,
+
+            // Assets base
             AssetSeeder::class,
+            EnhancedAssetSeeder::class,
+
+            // Datos transaccionales (requieren assets existentes)
+            AssetMovementSeeder::class,
+            AssetDepreciationSeeder::class,
+            AssetValuationSeeder::class,
+            AssetSalesSeeder::class,
+            MaintenanceOrderSeeder::class,
+            InventoryAuditSeeder::class,
         ]);
     }
 }
