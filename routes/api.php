@@ -24,8 +24,7 @@ Route::get('/test', function () {
 
 // ==================== TODAS LAS RUTAS PROTEGIDAS ====================
 // Usamos auth:web porque Inertia comparte la sesión web
-// Prefijo 'api.' para evitar colisión con rutas web
-Route::middleware('auth:web')->name('api.')->group(function () {
+Route::middleware('auth:web')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -104,6 +103,20 @@ Route::middleware('auth:web')->name('api.')->group(function () {
         Route::put('/{employee}', [EmployeeController::class, 'update'])->name('update');
         Route::post('/sync', [EmployeeController::class, 'syncExternal'])->name('sync');
         Route::get('/{employee}/sync-logs', [EmployeeController::class, 'getSyncLogs'])->name('sync-logs');
+    });
+
+    // ==================== ASSET TYPES ====================
+    Route::prefix('asset-types')->name('asset-types.')->group(function () {
+        Route::get('/', [AssetTypeController::class, 'index'])->name('index');
+        Route::post('/', [AssetTypeController::class, 'store'])->name('store');
+        Route::get('/{assetType}', [AssetTypeController::class, 'show'])->name('show');
+        Route::put('/{assetType}', [AssetTypeController::class, 'update'])->name('update');
+        Route::delete('/{assetType}', [AssetTypeController::class, 'destroy'])->name('destroy');
+
+        // Asset Type Properties
+        Route::post('/{assetType}/properties', [AssetTypeController::class, 'storeProperty'])->name('properties.store');
+        Route::put('/{assetType}/properties/{property}', [AssetTypeController::class, 'updateProperty'])->name('properties.update');
+        Route::delete('/{assetType}/properties/{property}', [AssetTypeController::class, 'destroyProperty'])->name('properties.destroy');
     });
 
     // ==================== INVENTORY AUDITS ====================
