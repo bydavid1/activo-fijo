@@ -3,7 +3,6 @@
 .env
 .env.backup
 .env.production
-.env.local
 .phpactor.json
 .phpunit.result.cache
 /.fleet
@@ -23,11 +22,3 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-
-# Keep Vercel deployment files
-!vercel.json
-!api/
-!.vercelignore
-!vercel-postinstall.sh
-!VERCEL_DEPLOY.md
-!.env.vercel.example

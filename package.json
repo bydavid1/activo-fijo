@@ -4,8 +4,6 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "vercel-build": "npm run build && bash vercel-postinstall.sh",
-        "postinstall": "bash vercel-postinstall.sh",
         "dev": "vite"
     },
     "dependencies": {
