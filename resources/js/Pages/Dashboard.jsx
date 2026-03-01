@@ -13,6 +13,7 @@ const Dashboard = ({ user }) => {
         depreciationChart: [],
         valueByCategory: [],
     });
+    const [recentActivity, setRecentActivity] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -21,10 +22,70 @@ const Dashboard = ({ user }) => {
 
     const fetchStats = async () => {
         try {
-            const [assetsRes, reportsRes] = await Promise.all([
-                axios.get('/api/assets?per_page=1'),
-                axios.get('/api/reports/asset-list'),
+            // Obtener actividad reciente real
+            const activityRes = await Promise.all([
+                axios.get('/api/assets?per_page=5&sort=created_at&direction=desc'),
+                axios.get('/api/movements?per_page=5').catch(() => ({ data: { data: [] } })),
+                axios.get('/api/maintenance-orders?per_page=3').catch(() => ({ data: { data: [] } })),
             ]);
+
+            const [latestAssets, latestMovements, latestMaintenance] = activityRes;
+            const activity = [];
+
+            // Agregar últimos activos creados
+            if (latestAssets.data?.data) {
+                latestAssets.data.data.forEach(asset => {
+                    activity.push({
+                        id: `asset-${asset.id}`,
+                        type: 'asset_created',
+                        icon: 'pi pi-box',
+                        color: 'text-blue-600',
+                        title: `Activo creado: ${asset.nombre}`,
+                        description: `Código: ${asset.codigo}`,
+                        timestamp: asset.created_at,
+                        link: `/assets/${asset.id}`
+                    });
+                });
+            }
+
+            // Agregar últimos movimientos
+            if (latestMovements.data?.data) {
+                latestMovements.data.data.forEach(movement => {
+                    activity.push({
+                        id: `movement-${movement.id}`,
+                        type: 'asset_moved',
+                        icon: 'pi pi-arrow-right',
+                        color: 'text-green-600',
+                        title: `Movimiento: ${movement.tipo}`,
+                        description: `${movement.asset?.nombre || 'Activo'} - ${movement.motivo || 'Sin motivo'}`,
+                        timestamp: movement.created_at,
+                        link: movement.asset ? `/assets/${movement.asset.id}` : null
+                    });
+                });
+            }
+
+            // Agregar órdenes de mantenimiento
+            if (latestMaintenance.data?.data) {
+                latestMaintenance.data.data.forEach(maintenance => {
+                    activity.push({
+                        id: `maintenance-${maintenance.id}`,
+                        type: 'maintenance',
+                        icon: 'pi pi-wrench',
+                        color: 'text-orange-600',
+                        title: `Mantenimiento: ${maintenance.tipo}`,
+                        description: `${maintenance.asset?.nombre || 'Activo'} - ${maintenance.estado}`,
+                        timestamp: maintenance.created_at,
+                        link: maintenance.asset ? `/assets/${maintenance.asset.id}` : null
+                    });
+                });
+            }
+
+            // Ordenar por timestamp y tomar los primeros 8
+            const sortedActivity = activity
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, 8);
+
+            setRecentActivity(sortedActivity);
 
             // Simular datos para el dashboard
             const mockData = {
@@ -58,6 +119,23 @@ const Dashboard = ({ user }) => {
     };
 
     const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+
+    const formatRelativeTime = (timestamp) => {
+        const now = new Date();
+        const time = new Date(timestamp);
+        const diffInMinutes = Math.floor((now - time) / (1000 * 60));
+
+        if (diffInMinutes < 1) return 'Hace unos momentos';
+        if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `Hace ${diffInHours} hora${diffInHours > 1 ? 's' : ''}`;
+
+        const diffInDays = Math.floor(diffInHours / 24);
+        if (diffInDays < 7) return `Hace ${diffInDays} día${diffInDays > 1 ? 's' : ''}`;
+
+        return time.toLocaleDateString('es-ES');
+    };
 
     return (
         <AppLayout user={user}>
@@ -137,7 +215,49 @@ const Dashboard = ({ user }) => {
             {/* Recent Activity */}
             <Card className="bg-white shadow mt-6">
                 <h5 className="text-lg font-bold mb-4">Actividad Reciente</h5>
-                <p className="text-gray-600">Las últimas operaciones aparecerán aquí</p>
+                {loading ? (
+                    <div className="text-center py-8">
+                        <i className="pi pi-spin pi-spinner text-3xl text-gray-400"></i>
+                    </div>
+                ) : recentActivity.length > 0 ? (
+                    <div className="space-y-4">
+                        {recentActivity.map((activity) => (
+                            <div key={activity.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                                <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center ${activity.color}`}>
+                                    <i className={`${activity.icon} text-sm`}></i>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900 truncate">
+                                                {activity.title}
+                                            </p>
+                                            <p className="text-xs text-gray-500 truncate">
+                                                {activity.description}
+                                            </p>
+                                        </div>
+                                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                                            {formatRelativeTime(activity.timestamp)}
+                                        </span>
+                                    </div>
+                                    {activity.link && (
+                                        <button
+                                            onClick={() => window.location.href = activity.link}
+                                            className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                                        >
+                                            Ver detalle →
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-8">
+                        <i className="pi pi-clock text-3xl text-gray-300 mb-2"></i>
+                        <p className="text-gray-500">No hay actividad reciente</p>
+                    </div>
+                )}
             </Card>
         </AppLayout>
     );

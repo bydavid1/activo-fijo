@@ -337,12 +337,12 @@ export default function ShowAsset({ user, assetId }) {
                             <div>
                                 <h3 className="mb-3">Vida Útil Transcurrida</h3>
                                 <div className="p-4 surface-100 border-round">
-                                    <div className="flex justify-content-between mb-2">
-                                        <span>{depInfo.meses_depreciados || 0} meses transcurridos</span>
-                                        <span>{(asset.vida_util_anos || 0) * 12} meses totales</span>
+                                    <div className="mb-2">
+                                        <span><strong>{depInfo.meses_depreciados || 0}</strong> meses transcurridos </span>
+                                        <span><strong>{(asset.vida_util_anos || 0) * 12}</strong> meses totales de vida útil</span>
                                     </div>
                                     <ProgressBar
-                                        value={depInfo.porcentaje_vida_util || 0}
+                                        value={depInfo.porcentaje_vida_util?.toFixed(1) || 0}
                                         showValue
                                         className="mb-3"
                                         color={depInfo.porcentaje_vida_util > 80 ? '#ef4444' : depInfo.porcentaje_vida_util > 50 ? '#f97316' : '#22c55e'}
@@ -358,7 +358,17 @@ export default function ShowAsset({ user, assetId }) {
                                         <h3 className="mt-4 mb-3">Historial de Depreciación</h3>
                                         <DataTable value={asset.depreciaciones} size="small" scrollable scrollHeight="200px">
                                             <Column field="ano" header="Año" />
-                                            <Column field="mes" header="Mes" />
+                                            <Column
+                                                field="mes"
+                                                header="Mes"
+                                                body={(row) => {
+                                                    const meses = [
+                                                        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                                                        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                                                    ];
+                                                    return row.mes ? meses[row.mes - 1] : '-';
+                                                }}
+                                            />
                                             <Column field="depreciacion_valor" header="Monto" body={(row) => formatCurrency(row.depreciacion_valor)} />
                                             <Column field="depreciacion_acumulada" header="Acumulado" body={(row) => formatCurrency(row.depreciacion_acumulada)} />
                                             <Column field="valor_en_libros" header="Valor Libros" body={(row) => formatCurrency(row.valor_en_libros)} />
@@ -438,9 +448,9 @@ export default function ShowAsset({ user, assetId }) {
                 header="Subir Archivo"
                 visible={uploadDialog}
                 onHide={() => setUploadDialog(false)}
-                style={{ width: '500px' }}
+                style={{ width: '40vw', maxWidth: '500px' }}
             >
-                <div className="flex flex-column gap-3">
+                <div className="flex flex-col gap-4">
                     <div>
                         <label className="block text-sm font-medium mb-2">Archivo *</label>
                         <FileUpload
@@ -469,7 +479,7 @@ export default function ShowAsset({ user, assetId }) {
                             rows={3}
                         />
                     </div>
-                    <div className="flex justify-content-end gap-2">
+                    <div className="flex justify-end gap-2 mt-2">
                         <Button label="Cancelar" severity="secondary" onClick={() => setUploadDialog(false)} />
                         <Button label="Subir" icon="pi pi-upload" onClick={handleUploadAttachment} />
                     </div>
