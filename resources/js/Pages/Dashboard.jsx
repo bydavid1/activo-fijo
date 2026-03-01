@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import axios from 'axios';
 
-const Dashboard = ({ user }) => {
+const Dashboard = () => {
+    const { user } = usePage().props;
     const [stats, setStats] = useState({
         totalAssets: 0,
         totalValue: 0,

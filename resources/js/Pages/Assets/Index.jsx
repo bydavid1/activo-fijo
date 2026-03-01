@@ -16,9 +16,12 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Menu } from 'primereact/menu';
 import AppLayout from '@/Layouts/AppLayout';
+import { PermissionGate } from '@/Components/PermissionGate';
+import { usePermissions } from '@/Composables/usePermissions';
 import axios from 'axios';
 
-const Assets = ({ user }) => {
+const Assets = () => {
+    const { hasPermission } = usePermissions();
     const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [globalFilter, setGlobalFilter] = useState('');
@@ -589,52 +592,79 @@ const Assets = ({ user }) => {
     const [menuAsset, setMenuAsset] = useState(null);
 
     const getMenuItems = (asset) => {
-        const items = [
-            {
-                label: 'Ver Detalle',
-                icon: 'pi pi-eye',
-                command: () => window.location.href = `/assets/${asset.id}`
-            },
-            {
+        const items = [];
+
+        // Ver detalle - todos pueden ver
+        items.push({
+            label: 'Ver Detalle',
+            icon: 'pi pi-eye',
+            command: () => window.location.href = `/assets/${asset.id}`
+        });
+
+        // Editar - solo con permiso
+        if (hasPermission('assets.edit')) {
+            items.push({
                 label: 'Editar',
                 icon: 'pi pi-pencil',
                 command: () => handleOpenDialog(asset)
-            },
-            {
-                label: 'Ver QR / Códigos',
-                icon: 'pi pi-qrcode',
-                command: () => handleShowQr(asset)
-            },
-            { separator: true }
-        ];
+            });
+        }
+
+        // Ver QR - todos pueden ver
+        items.push({
+            label: 'Ver QR / Códigos',
+            icon: 'pi pi-qrcode',
+            command: () => handleShowQr(asset)
+        });
+
+        // Separador solo si hay acciones adicionales
+        if (hasPermission('assets.sell') || hasPermission('assets.dispose') || hasPermission('assets.revalue')) {
+            items.push({ separator: true });
+        }
 
         if (asset.estado === 'activo') {
-            items.push(
-                {
+            // Vender - solo con permiso
+            if (hasPermission('assets.sell')) {
+                items.push({
                     label: 'Vender',
                     icon: 'pi pi-shopping-cart',
                     command: () => handleOpenSell(asset)
-                },
-                {
+                });
+            }
+
+            // Dar de baja - solo con permiso
+            if (hasPermission('assets.dispose')) {
+                items.push({
                     label: 'Dar de Baja',
                     icon: 'pi pi-ban',
                     command: () => handleOpenDispose(asset)
-                },
-                {
+                });
+            }
+
+            // Revalorizar - solo con permiso
+            if (hasPermission('assets.revalue')) {
+                items.push({
                     label: 'Revalorizar',
                     icon: 'pi pi-dollar',
                     command: () => handleOpenRevalue(asset)
-                },
-                { separator: true }
-            );
+                });
+            }
+
+            // Separador antes de eliminar si hay acciones de activo
+            if ((hasPermission('assets.sell') || hasPermission('assets.dispose') || hasPermission('assets.revalue')) && hasPermission('assets.delete')) {
+                items.push({ separator: true });
+            }
         }
 
-        items.push({
-            label: 'Eliminar',
-            icon: 'pi pi-trash',
-            className: 'text-red-500',
-            command: () => handleDeleteAsset(asset)
-        });
+        // Eliminar - solo con permiso
+        if (hasPermission('assets.delete')) {
+            items.push({
+                label: 'Eliminar',
+                icon: 'pi pi-trash',
+                className: 'text-red-500',
+                command: () => handleDeleteAsset(asset)
+            });
+        }
 
         return items;
     };
@@ -685,12 +715,14 @@ const Assets = ({ user }) => {
             <Card className="bg-white shadow mb-6">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
                     <h5 className="text-xl md:text-2xl font-bold">Gestión de Activos</h5>
-                    <Button
-                        label="Nuevo Activo"
-                        icon="pi pi-plus"
-                        onClick={() => window.location.href = '/assets/create'}
-                        className="p-button-success w-full md:w-auto"
-                    />
+                    <PermissionGate permission="assets.create">
+                        <Button
+                            label="Nuevo Activo"
+                            icon="pi pi-plus"
+                            onClick={() => window.location.href = '/assets/create'}
+                            className="p-button-success w-full md:w-auto"
+                        />
+                    </PermissionGate>
                 </div>
 
                 <div className="mb-4">

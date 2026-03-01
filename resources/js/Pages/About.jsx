@@ -2,10 +2,11 @@ import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
 import { Divider } from 'primereact/divider';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 
-export default function About({ user }) {
+export default function About() {
+    const { user } = usePage().props;
     const features = [
         {
             category: "Gestión de Activos",

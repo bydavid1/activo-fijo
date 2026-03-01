@@ -16,141 +16,115 @@ Route::post('/register', [RegisterController::class, 'register'])->middleware('g
 
 // Dashboard
 Route::get('/', function () {
-    return Inertia::render('Dashboard', [
-        'user' => auth()->user(),
-    ]);
+    return Inertia::render('Dashboard');
 })->middleware('auth')->name('dashboard');
 
 // ==================== ABOUT / INFO ====================
 Route::get('/about', function () {
-    return Inertia::render('About', [
-        'user' => auth()->user(),
-    ]);
+    return Inertia::render('About');
 })->middleware('auth')->name('about');
 
 // ==================== ASSETS ====================
-Route::prefix('assets')->middleware('auth')->name('assets.')->group(function () {
+Route::prefix('assets')->middleware(['auth', 'permission:assets.view'])->name('assets.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('Assets/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('Assets/Index');
     })->name('index');
 
     Route::get('/create', function () {
-        return Inertia::render('Assets/Create', [
-            'user' => auth()->user(),
-        ]);
-    })->name('create');
+        return Inertia::render('Assets/Create');
+    })->middleware('permission:assets.create')->name('create');
 
     Route::get('/{asset}', function ($asset) {
         return Inertia::render('Assets/Show', [
-            'user' => auth()->user(),
             'assetId' => $asset,
         ]);
     })->name('show');
 
     Route::get('/{asset}/edit', function ($asset) {
         return Inertia::render('Assets/Edit', [
-            'user' => auth()->user(),
             'asset' => $asset,
         ]);
-    })->name('edit');
+    })->middleware('permission:assets.edit')->name('edit');
 });
 
 // ==================== EMPLOYEES ====================
-Route::prefix('employees')->middleware('auth')->name('employees.')->group(function () {
+Route::prefix('employees')->middleware(['auth', 'permission:employees.view'])->name('employees.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('Employees/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('Employees/Index');
     })->name('index');
 
     Route::get('/create', function () {
-        return Inertia::render('Employees/Create', [
-            'user' => auth()->user(),
-        ]);
-    })->name('create');
+        return Inertia::render('Employees/Create');
+    })->middleware('permission:employees.create')->name('create');
 });
 
 // ==================== MOVEMENTS ====================
-Route::prefix('movements')->middleware('auth')->name('movements.')->group(function () {
+Route::prefix('movements')->middleware(['auth', 'permission:assets.move'])->name('movements.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('Movements/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('Movements/Index');
     })->name('index');
 });
 
 // ==================== ADMINISTRATION ====================
-Route::prefix('categories')->middleware('auth')->name('categories.')->group(function () {
+Route::prefix('categories')->middleware(['auth', 'permission:admin.manage_config'])->name('categories.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('Categories/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('Categories/Index');
     })->name('index');
 });
 
-Route::prefix('asset-types')->middleware('auth')->name('asset-types.')->group(function () {
+Route::prefix('asset-types')->middleware(['auth', 'permission:admin.manage_config'])->name('asset-types.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('AssetTypes/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('AssetTypes/Index');
     })->name('index');
 });
 
-Route::prefix('inventory-audits')->middleware('auth')->name('inventory-audits.')->group(function () {
+Route::prefix('inventory-audits')->middleware(['auth', 'permission:inventory.audit'])->name('inventory-audits.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('InventoryAudits/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('InventoryAudits/Index');
     })->name('index');
 
     Route::get('/{audit}/scanner', function ($audit) {
         return Inertia::render('InventoryAudits/Scanner', [
-            'user' => auth()->user(),
             'auditId' => $audit,
         ]);
     })->name('scanner');
 
     Route::get('/{audit}/report', function ($audit) {
         return Inertia::render('InventoryAudits/Report', [
-            'user' => auth()->user(),
             'auditId' => $audit,
         ]);
     })->name('report');
 });
 
-Route::prefix('locations')->middleware('auth')->name('locations.')->group(function () {
+Route::prefix('locations')->middleware(['auth', 'permission:admin.manage_config'])->name('locations.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('Locations/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('Locations/Index');
     })->name('index');
 });
 
-Route::prefix('suppliers')->middleware('auth')->name('suppliers.')->group(function () {
+Route::prefix('suppliers')->middleware(['auth', 'permission:suppliers.view'])->name('suppliers.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('Suppliers/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('Suppliers/Index');
     })->name('index');
 });
 
 // ==================== MAINTENANCE ====================
-Route::prefix('maintenance')->middleware('auth')->name('maintenance.')->group(function () {
+Route::prefix('maintenance')->middleware(['auth', 'permission:maintenance.view'])->name('maintenance.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('Maintenance/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('Maintenance/Index');
     })->name('index');
 });
 
 // ==================== REPORTS ====================
-Route::prefix('reports')->middleware('auth')->name('reports.')->group(function () {
+Route::prefix('reports')->middleware(['auth', 'permission:reports.view'])->name('reports.')->group(function () {
     Route::get('/', function () {
-        return Inertia::render('Reports/Index', [
-            'user' => auth()->user(),
-        ]);
+        return Inertia::render('Reports/Index');
     })->name('index');
+});
+
+// ==================== ADMIN (USERS & ROLES) ====================
+Route::prefix('admin')->middleware(['auth', 'permission:admin.manage_users'])->name('admin.')->group(function () {
+    Route::resource('users', App\Http\Controllers\Admin\UserController::class);
+    Route::patch('users/{user}/toggle-status', [App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])->name('users.toggle-status');
 });
 

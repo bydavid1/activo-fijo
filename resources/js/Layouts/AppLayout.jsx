@@ -4,10 +4,17 @@ import { Sidebar } from 'primereact/sidebar';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
+import { usePermissions } from '@/Composables/usePermissions';
 
 // Componente de item de menú personalizado
 const MenuItem = ({ item, collapsed, onNavigate }) => {
+    const { hasPermission } = usePermissions();
     const hasSubItems = item.items && item.items.length > 0;
+
+    // Verificar permisos si se requieren
+    if (item.permission && !hasPermission(item.permission)) {
+        return null;
+    }
 
     const handleClick = () => {
         if (item.href) {
@@ -18,6 +25,15 @@ const MenuItem = ({ item, collapsed, onNavigate }) => {
 
     // Si tiene subitems, mostrar como grupo siempre expandido
     if (hasSubItems) {
+        // Filtrar subitems por permisos
+        const allowedItems = item.items.filter(subItem =>
+            !subItem.permission || hasPermission(subItem.permission)
+        );
+
+        if (allowedItems.length === 0) {
+            return null;
+        }
+
         return (
             <div className="mb-2">
                 {!collapsed && (
@@ -26,7 +42,7 @@ const MenuItem = ({ item, collapsed, onNavigate }) => {
                     </p>
                 )}
                 <div className={collapsed ? '' : 'ml-2'}>
-                    {item.items.map((subItem, idx) => (
+                    {allowedItems.map((subItem, idx) => (
                         <button
                             key={idx}
                             onClick={() => {
@@ -92,45 +108,58 @@ export default function AppLayout({ children, user }) {
         {
             label: 'Activos',
             icon: 'pi pi-box',
+            permission: 'assets.view',
             items: [
-                { label: 'Listar', href: '/assets' },
-                { label: 'Crear', href: '/assets/create' },
+                { label: 'Listar', href: '/assets', permission: 'assets.view' },
+                { label: 'Crear', href: '/assets/create', permission: 'assets.create' },
             ]
         },
         {
             label: 'Movimientos',
             icon: 'pi pi-arrow-right-arrow-left',
             href: '/movements',
+            permission: 'assets.move'
         },
         {
             label: 'Empleados',
             icon: 'pi pi-users',
             href: '/employees',
+            permission: 'employees.view'
         },
         {
             label: 'Inventario',
             icon: 'pi pi-check-square',
             href: '/inventory-audits',
+            permission: 'inventory.audit'
         },
         {
             label: 'Mantenimiento',
             icon: 'pi pi-wrench',
             href: '/maintenance',
+            permission: 'maintenance.view'
         },
         {
             label: 'Administración',
             icon: 'pi pi-cog',
+            permission: 'admin.manage_config',
             items: [
-                { label: 'Tipos de Bien', href: '/asset-types' },
-                { label: 'Categorías', href: '/categories' },
-                { label: 'Ubicaciones', href: '/locations' },
-                { label: 'Proveedores', href: '/suppliers' },
+                { label: 'Tipos de Bien', href: '/asset-types', permission: 'admin.manage_config' },
+                { label: 'Categorías', href: '/categories', permission: 'admin.manage_config' },
+                { label: 'Ubicaciones', href: '/locations', permission: 'admin.manage_config' },
+                { label: 'Proveedores', href: '/suppliers', permission: 'suppliers.view' },
             ]
+        },
+        {
+            label: 'Usuarios',
+            icon: 'pi pi-users',
+            href: '/admin/users',
+            permission: 'admin.manage_users'
         },
         {
             label: 'Reportes',
             icon: 'pi pi-chart-bar',
             href: '/reports',
+            permission: 'reports.view'
         },
         {
             label: 'Información',
