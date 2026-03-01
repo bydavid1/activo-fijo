@@ -17,7 +17,16 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const response = await axios.post('/login', { email, password });
+            // Get token from meta tag directly
+            const token = document.querySelector('meta[name="csrf-token"]')?.content;
+            
+            const response = await axios.post('/login', { email, password }, {
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
             console.log('Login successful:', response.data);
 
             // Redirect to dashboard
