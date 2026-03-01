@@ -9,5 +9,10 @@ cmds = ["npm ci", "composer install --no-dev --optimize-autoloader"]
 [phases.build]
 cmds = ["npm run build"]
 
+[variables]
+CACHE_DRIVER = "file"
+SESSION_DRIVER = "file"
+QUEUE_CONNECTION = "sync"
+
 [start]
 cmd = "php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"
