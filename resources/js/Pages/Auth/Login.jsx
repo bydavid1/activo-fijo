@@ -7,7 +7,7 @@ import { useRef } from 'react';
 import axios from 'axios';
 
 export default function Login() {
-    const [email, setEmail] = useState('admin@domain.com');
+    const [email, setEmail] = useState('admin@sistema.com');
     const [password, setPassword] = useState('admin123');
     const [loading, setLoading] = useState(false);
     const toast = useRef(null);
@@ -76,7 +76,7 @@ export default function Login() {
 
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
                         <p className="text-gray-700">
-                            <strong>Demo:</strong> admin@example.com / password
+                            <strong>Demo:</strong> admin@sistema.com / admin123
                         </p>
                     </div>
 
