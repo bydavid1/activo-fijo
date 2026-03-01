@@ -4,7 +4,6 @@ import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
-import axios from 'axios';
 
 export default function Login() {
     const [email, setEmail] = useState('admin@sistema.com');
@@ -17,11 +16,7 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const response = await axios.post('/login', { email, password }, {
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
-                },
-            });
+            const response = await window.axios.post('/login', { email, password });
 
             // Redirect to dashboard
             window.location.href = '/';

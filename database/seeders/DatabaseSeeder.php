@@ -42,6 +42,7 @@ class DatabaseSeeder extends Seeder
             AssetSalesSeeder::class,
             MaintenanceOrderSeeder::class,
             InventoryAuditSeeder::class,
+            RolePermissionSeeder::class,
         ]);
     }
 }
