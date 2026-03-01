@@ -160,14 +160,18 @@ Route::middleware('auth:web')->group(function () {
 
     // ==================== REPORTS ====================
     Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/options', [ReportController::class, 'getOptions'])->name('options');
         Route::get('/asset-list', [ReportController::class, 'assetList'])->name('asset-list');
         Route::get('/depreciation', [ReportController::class, 'depreciation'])->name('depreciation');
         Route::get('/value-responsible', [ReportController::class, 'valueByResponsible'])->name('value-responsible');
         Route::get('/value-location', [ReportController::class, 'valueByLocation'])->name('value-location');
         Route::get('/dispositions-acquisitions', [ReportController::class, 'dispositionsAndAcquisitions'])->name('dispositions-acquisitions');
         Route::get('/movements', [ReportController::class, 'movements'])->name('movements');
+        Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
         Route::get('/discrepancies', [ReportController::class, 'discrepancies'])->name('discrepancies');
         Route::get('/maintenance', [ReportController::class, 'maintenance'])->name('maintenance');
+        Route::get('/inventory-audits', [ReportController::class, 'inventoryAudits'])->name('inventory-audits');
+        Route::get('/summary', [ReportController::class, 'summary'])->name('summary');
         Route::post('/export', [ReportController::class, 'export'])->name('export');
     });
 }); // Cierre del middleware auth:web
