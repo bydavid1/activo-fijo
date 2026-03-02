@@ -228,19 +228,19 @@ export default function Report({ user, auditId }) {
 
             {/* Header */}
             <Card className="mb-4">
-                <div className="flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <h2 className="m-0 mb-2">Reporte de Levantamiento</h2>
-                        <div className="flex gap-3 text-sm text-600">
-                            <span>Código: {auditoria.codigo}</span>
-                            <span>•</span>
-                            <span>Nombre: {auditoria.nombre}</span>
-                            <span>•</span>
-                            <span>Estado: <Badge value="Completado" severity="success" /></span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ flex: '1 1 300px' }}>
+                        <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem' }}>Reporte de Levantamiento</h2>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', fontSize: '0.875rem', color: '#666' }}>
+                            <span><strong>Código:</strong> {auditoria.codigo}</span>
+                            <span style={{ color: '#ccc' }}>•</span>
+                            <span><strong>Nombre:</strong> {auditoria.nombre}</span>
+                            <span style={{ color: '#ccc' }}>•</span>
+                            <Badge value="Completado" severity="success" />
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
                         <Dropdown
                             value={exportFormat}
                             options={[
@@ -249,15 +249,13 @@ export default function Report({ user, auditId }) {
                                 { label: 'CSV', value: 'csv' }
                             ]}
                             onChange={(e) => setExportFormat(e.value)}
-                            className="w-100px"
+                            style={{ width: '100px' }}
                         />
-
                         <Button
                             label="Exportar"
                             icon="pi pi-download"
                             onClick={exportReporte}
                         />
-
                         <Button
                             label="Volver"
                             icon="pi pi-arrow-left"
@@ -268,97 +266,101 @@ export default function Report({ user, auditId }) {
                 </div>
 
                 {/* Fechas del levantamiento */}
-                <div className="grid grid-cols-3 gap-3 text-sm text-600">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.875rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '0.75rem' }}>
                     <div>
-                        <span className="font-semibold">Iniciado:</span> {new Date(auditoria.fecha_inicio).toLocaleString('es-CO')}
+                        <i className="pi pi-calendar" style={{ marginRight: '0.25rem', color: '#999' }}></i>
+                        <strong>Iniciado:</strong> {new Date(auditoria.fecha_inicio).toLocaleString('es-CO')}
                     </div>
                     <div>
-                        <span className="font-semibold">Finalizado:</span> {new Date(auditoria.fecha_finalizacion).toLocaleString('es-CO')}
+                        <i className="pi pi-calendar-plus" style={{ marginRight: '0.25rem', color: '#999' }}></i>
+                        <strong>Finalizado:</strong> {new Date(auditoria.fecha_finalizacion).toLocaleString('es-CO')}
                     </div>
                     <div>
-                        <span className="font-semibold">Duración:</span> {Math.ceil((new Date(auditoria.fecha_finalizacion) - new Date(auditoria.fecha_inicio)) / (1000 * 60 * 60))}h
+                        <i className="pi pi-clock" style={{ marginRight: '0.25rem', color: '#999' }}></i>
+                        <strong>Duración:</strong> {Math.ceil((new Date(auditoria.fecha_finalizacion) - new Date(auditoria.fecha_inicio)) / (1000 * 60 * 60))}h
                     </div>
                 </div>
             </Card>
 
             {/* Resumen ejecutivo */}
-            <Card className="mb-4" title="Resumen Ejecutivo">
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Estadísticas */}
-                    <div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="text-center p-3 bg-green-50 border-round">
-                                <div className="text-3xl font-bold text-green-600">{stats.total_encontrados}</div>
-                                <div className="text-sm text-600">Encontrados</div>
-                                <div className="text-xs text-500">{stats.porcentaje_encontrados}% del total</div>
+            <Card className="mb-4">
+                <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.1rem', fontWeight: '600', borderBottom: '2px solid #3b82f6', paddingBottom: '0.5rem', display: 'inline-block' }}>Resumen Ejecutivo</h3>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center' }}>
+                    {/* Estadísticas en grid 2x2 */}
+                    <div style={{ flex: '1 1 320px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                            <div style={{ textAlign: 'center', padding: '1.25rem 1rem', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#16a34a', lineHeight: 1 }}>{stats.total_encontrados}</div>
+                                <div style={{ fontSize: '0.875rem', color: '#555', marginTop: '0.25rem' }}>Encontrados</div>
+                                <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.15rem' }}>{stats.porcentaje_encontrados}% del total</div>
                             </div>
 
-                            <div className="text-center p-3 bg-red-50 border-round">
-                                <div className="text-3xl font-bold text-red-600">{stats.total_faltantes}</div>
-                                <div className="text-sm text-600">Faltantes</div>
-                                <div className="text-xs text-500">{((stats.total_faltantes / stats.total_esperados) * 100).toFixed(1)}% del total</div>
+                            <div style={{ textAlign: 'center', padding: '1.25rem 1rem', backgroundColor: '#fef2f2', borderRadius: '12px', border: '1px solid #fecaca' }}>
+                                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#dc2626', lineHeight: 1 }}>{stats.total_faltantes}</div>
+                                <div style={{ fontSize: '0.875rem', color: '#555', marginTop: '0.25rem' }}>Faltantes</div>
+                                <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.15rem' }}>{((stats.total_faltantes / stats.total_esperados) * 100).toFixed(1)}% del total</div>
                             </div>
 
-                            <div className="text-center p-3 bg-orange-50 border-round">
-                                <div className="text-3xl font-bold text-orange-600">{stats.total_discrepantes}</div>
-                                <div className="text-sm text-600">Discrepantes</div>
-                                <div className="text-xs text-500">Con diferencias</div>
+                            <div style={{ textAlign: 'center', padding: '1.25rem 1rem', backgroundColor: '#fff7ed', borderRadius: '12px', border: '1px solid #fed7aa' }}>
+                                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#ea580c', lineHeight: 1 }}>{stats.total_discrepantes}</div>
+                                <div style={{ fontSize: '0.875rem', color: '#555', marginTop: '0.25rem' }}>Discrepantes</div>
+                                <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.15rem' }}>Con diferencias</div>
                             </div>
 
-                            <div className="text-center p-3 bg-blue-50 border-round">
-                                <div className="text-3xl font-bold text-blue-600">{stats.total_extras}</div>
-                                <div className="text-sm text-600">Extras</div>
-                                <div className="text-xs text-500">No esperados</div>
+                            <div style={{ textAlign: 'center', padding: '1.25rem 1rem', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
+                                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#2563eb', lineHeight: 1 }}>{stats.total_extras}</div>
+                                <div style={{ fontSize: '0.875rem', color: '#555', marginTop: '0.25rem' }}>Extras</div>
+                                <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.15rem' }}>No esperados</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Gráfico circular */}
-                    <div className="flex justify-content-center">
+                    <div style={{ flex: '0 1 280px', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto' }}>
                         <Chart
                             type="doughnut"
                             data={chartData}
                             options={chartOptions}
-                            style={{ width: '300px', height: '300px' }}
+                            style={{ width: '250px', height: '250px' }}
                         />
                     </div>
                 </div>
 
-                <Divider />
-
                 {/* Indicadores clave */}
-                <div className="grid grid-cols-4 gap-3 text-center">
-                    <div>
-                        <div className="text-lg font-bold">{stats.total_esperados}</div>
-                        <div className="text-sm text-600">Total Esperados</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginTop: '1.5rem', padding: '1rem 0', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ textAlign: 'center', padding: '0.75rem' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1f2937' }}>{stats.total_esperados}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.15rem' }}>Total Esperados</div>
                     </div>
-                    <div>
-                        <div className="text-lg font-bold text-green-600">{stats.porcentaje_encontrados}%</div>
-                        <div className="text-sm text-600">Efectividad</div>
+                    <div style={{ textAlign: 'center', padding: '0.75rem' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#16a34a' }}>{stats.porcentaje_encontrados}%</div>
+                        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.15rem' }}>Efectividad</div>
                     </div>
-                    <div>
-                        <div className="text-lg font-bold text-red-600">{stats.total_faltantes + stats.total_discrepantes}</div>
-                        <div className="text-sm text-600">Problemas</div>
+                    <div style={{ textAlign: 'center', padding: '0.75rem' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#dc2626' }}>{stats.total_faltantes + stats.total_discrepantes}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.15rem' }}>Problemas</div>
                     </div>
-                    <div>
-                        <div className="text-lg font-bold text-blue-600">{stats.total_extras}</div>
-                        <div className="text-sm text-600">Hallazgos</div>
+                    <div style={{ textAlign: 'center', padding: '0.75rem' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#2563eb' }}>{stats.total_extras}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.15rem' }}>Hallazgos</div>
                     </div>
                 </div>
             </Card>
 
             {/* Detalles por categoría */}
             <Card>
-                <div className="mb-3">
-                    <div className="flex justify-content-between align-items-center mb-3">
-                        <h3 className="m-0">Detalle de Activos</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>Detalle de Activos</h3>
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
                         <InputText
                             placeholder="Buscar..."
                             value={globalFilter}
                             onChange={(e) => setGlobalFilter(e.target.value)}
-                            className="w-300px"
+                            style={{ width: '250px' }}
                         />
-                    </div>
+                    </span>
                 </div>
 
                 <TabView activeIndex={activeTabIndex} onTabChange={(e) => setActiveTabIndex(e.index)}>
