@@ -193,14 +193,13 @@ class InventoryAuditController extends Controller
             $activo = Asset::where('codigo', $validated['codigo'])->first();
 
             if (!$activo) {
-                // Activo extra (no esperado)
-                $this->registrarActivoExtra($auditoria, $validated['codigo'], $validated['observaciones']);
-
+                // El código escaneado NO existe en la base de datos
+                // No agregamos nada, simplemente informamos al usuario
                 DB::commit();
 
                 return response()->json([
-                    'tipo' => 'extra',
-                    'message' => 'Activo adicional encontrado (no estaba en la lista)',
+                    'tipo' => 'no_existe',
+                    'message' => 'El código escaneado no corresponde a ningún activo registrado en el sistema',
                     'success' => true
                 ]);
             }
@@ -209,15 +208,20 @@ class InventoryAuditController extends Controller
             $item = $auditoria->items()->where('asset_id', $activo->id)->first();
 
             if (!$item) {
-                // Activo existe pero no está en este levantamiento
-                $this->registrarActivoExtra($auditoria, $validated['codigo'], $validated['observaciones']);
+                // Activo existe en la BD pero no está en la lista de este levantamiento
+                // Este es un activo "extra" - sí lo registramos porque existe en el sistema
+                $this->registrarActivoExtra($auditoria, $activo, $validated['observaciones']);
 
                 DB::commit();
 
                 return response()->json([
-                    'tipo' => 'fuera_alcance',
-                    'activo' => $activo,
-                    'message' => 'Activo encontrado pero no pertenece a este levantamiento',
+                    'tipo' => 'extra',
+                    'activo' => [
+                        'id' => $activo->id,
+                        'codigo' => $activo->codigo,
+                        'nombre' => $activo->nombre,
+                    ],
+                    'message' => 'Activo encontrado pero no pertenece a este levantamiento (agregado como extra)',
                     'success' => true
                 ]);
             }
@@ -453,16 +457,17 @@ class InventoryAuditController extends Controller
     }
 
     /**
-     * Registra un activo extra encontrado
+     * Registra un activo extra encontrado (activo que existe en BD pero no estaba en la lista)
      */
-    private function registrarActivoExtra($auditoria, $codigo, $observaciones = null)
+    private function registrarActivoExtra($auditoria, $activo, $observaciones = null)
     {
         InventoryAuditFinding::create([
             'inventory_audit_id' => $auditoria->id,
             'tipo' => 'asset_extra',
-            'codigo_escaneado' => $codigo,
-            'descripcion' => $observaciones ?: 'Activo adicional encontrado durante el escaneo',
-            'severidad' => 'medium',
+            'asset_id' => $activo->id,
+            'codigo_escaneado' => $activo->codigo,
+            'descripcion' => $observaciones ?: "Activo '{$activo->nombre}' encontrado durante el escaneo pero no estaba en la lista del levantamiento",
+            'severidad' => 'low',
             'fecha_detectado' => now(),
         ]);
     }

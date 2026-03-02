@@ -97,6 +97,9 @@ export default function Scanner({ user, auditId }) {
         try {
             setScanning(true);
 
+            // Cerrar el scanner inmediatamente para evitar múltiples escaneos
+            setShowScanner(false);
+
             // Extraer código si viene como JSON
             let codigoFinal = codigo;
 
@@ -146,12 +149,14 @@ export default function Scanner({ user, auditId }) {
                 // Mostrar mensaje según el tipo de resultado
                 const severity = tipo === 'encontrado' ? 'success' :
                                tipo === 'extra' ? 'info' :
+                               tipo === 'no_existe' ? 'warn' :
                                tipo === 'fuera_alcance' ? 'warn' : 'info';
 
                 toast.current?.show({
                     severity,
                     summary: tipo === 'encontrado' ? '✅ Encontrado' :
                             tipo === 'extra' ? '➕ Extra' :
+                            tipo === 'no_existe' ? '⚠️ No existe' :
                             tipo === 'fuera_alcance' ? '🔍 Fuera de alcance' : 'Info',
                     detail: activo ? `${activo.codigo} - ${activo.nombre}` : message,
                     life: tipo === 'encontrado' ? 2000 : 4000
@@ -170,6 +175,13 @@ export default function Scanner({ user, auditId }) {
         } catch (error) {
             console.error('Error al escanear:', error);
             const errorMsg = error.response?.data?.message || error.message || 'Error al procesar el escaneo';
+
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: errorMsg,
+                life: 5000
+            });
         } finally {
             setScanning(false);
         }
