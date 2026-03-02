@@ -97,8 +97,8 @@ export default function Scanner({ user, auditId }) {
         try {
             setScanning(true);
 
-            // Cerrar el scanner inmediatamente para evitar múltiples escaneos
-            setShowScanner(false);
+            // El scanner se pausa automáticamente en el componente QRScanner
+            // No cerramos el modal para que el usuario pueda seguir escaneando
 
             // Extraer código si viene como JSON
             let codigoFinal = codigo;

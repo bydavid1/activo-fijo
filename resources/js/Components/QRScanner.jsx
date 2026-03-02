@@ -50,6 +50,23 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
         }
     }, [permissionGranted, visible, showPermissionDialog]);
 
+    // Efecto para reanudar el scanner cuando loading cambia de true a false
+    const prevLoadingRef = useRef(loading);
+    useEffect(() => {
+        // Si loading cambió de true a false, reanudar el scanner
+        if (prevLoadingRef.current === true && loading === false) {
+            if (scannerRef.current && !isScanning) {
+                console.log('Loading terminó, reanudando scanner...');
+                scannerRef.current.start().then(() => {
+                    setIsScanning(true);
+                }).catch(err => {
+                    console.error('Error reanudando scanner:', err);
+                });
+            }
+        }
+        prevLoadingRef.current = loading;
+    }, [loading, isScanning]);
+
     const requestCameraPermission = async () => {
         try {
             setPermissionRequested(true);
