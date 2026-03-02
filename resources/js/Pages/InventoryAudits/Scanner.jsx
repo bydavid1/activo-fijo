@@ -27,6 +27,7 @@ export default function Scanner({ user, auditId }) {
     const [selectedItem, setSelectedItem] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const toast = useRef(null);
+    const intervalRef = useRef(null); // Referencia para el interval
 
     // Cargar datos de la auditoría
     useEffect(() => {
@@ -35,18 +36,39 @@ export default function Scanner({ user, auditId }) {
 
     // Actualizar datos cada 30 segundos si está en progreso
     useEffect(() => {
-        let interval;
-        if (auditoria?.estado === 'in_progress') {
-            interval = setInterval(loadAuditoria, 30000);
+        // Limpiar interval existente
+        if (intervalRef.current) {
+            console.log('Limpiando interval anterior');
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
         }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [auditoria?.estado]);
 
-    const loadAuditoria = async () => {
+        // Solo crear interval si la auditoría está en progreso
+        if (auditoria?.estado === 'in_progress') {
+            console.log('Configurando interval de actualización cada 30s para auditoría:', auditoria.codigo);
+            intervalRef.current = setInterval(() => {
+                console.log('Ejecutando actualización automática...');
+                loadAuditoria(false); // Sin mostrar loader en actualizaciones automáticas
+            }, 30000);
+        } else {
+            console.log('Auditoría no está en progreso o no existe, no se configurará interval');
+        }
+
+        // Cleanup function
+        return () => {
+            if (intervalRef.current) {
+                console.log('Limpiando interval de actualización en cleanup');
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        };
+    }, [auditoria?.codigo, auditoria?.estado]); // Dependencias más específicas
+
+    const loadAuditoria = async (showLoader = true) => {
         try {
-            setLoading(true);
+            if (showLoader) {
+                setLoading(true);
+            }
             const response = await axios.get(`/api/inventory-audits/${auditId}`);
 
             if (response.data.success) {
@@ -63,7 +85,9 @@ export default function Scanner({ user, auditId }) {
                 life: 3000
             });
         } finally {
-            setLoading(false);
+            if (showLoader) {
+                setLoading(false);
+            }
         }
     };
 
@@ -95,8 +119,8 @@ export default function Scanner({ user, auditId }) {
                     life: tipo === 'encontrado' ? 2000 : 4000
                 });
 
-                // Recargar datos
-                await loadAuditoria();
+                // Recargar datos sin mostrar loader
+                await loadAuditoria(false);
 
                 // Si es encontrado, mostrar brevemente los detalles
                 if (tipo === 'encontrado' && activo) {

@@ -101,9 +101,27 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
 
     const initializeScanner = async () => {
         try {
+            // Verificar que tenemos el elemento video
+            if (!videoRef.current) {
+                throw new Error('Elemento de video no disponible');
+            }
+
             // Verificar soporte de getUserMedia
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 throw new Error('Tu navegador no soporta acceso a cámara');
+            }
+
+            // Verificar permisos explícitamente
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop()); // Detener stream temporal
+            } catch (permError) {
+                if (permError.name === 'NotAllowedError') {
+                    // Limpiar localStorage si se denegaron permisos
+                    localStorage.removeItem('qr-scanner-permission-granted');
+                    localStorage.removeItem('qr-scanner-permission-requested');
+                }
+                throw permError;
             }
 
             // Listar cámaras disponibles
@@ -137,6 +155,11 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                 config.preferredCamera = preferredCamera.id;
             }
 
+            // Limpiar scanner anterior si existe
+            if (scannerRef.current) {
+                scannerRef.current.destroy();
+            }
+
             scannerRef.current = new QrScanner(
                 videoRef.current,
                 result => handleScan(result.data),
@@ -146,18 +169,42 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
             await scannerRef.current.start();
             setIsScanning(true);
 
+            toast.current?.show({
+                severity: 'success',
+                summary: 'Scanner listo',
+                detail: 'Cámara iniciada correctamente',
+                life: 2000
+            });
+
         } catch (error) {
             console.error('Error inicializando scanner:', error);
-            const errorMessage = error.message || 'No se pudo acceder a la cámara. Verifique los permisos.';
+
+            let errorMessage = 'No se pudo inicializar la cámara.';
+            if (error.name === 'NotAllowedError') {
+                errorMessage = 'Permisos de cámara denegados. Por favor, permite el acceso y recarga la página.';
+                setPermissionGranted(false);
+            } else if (error.name === 'NotFoundError') {
+                errorMessage = 'No se encontró ninguna cámara en este dispositivo.';
+            } else if (error.name === 'NotSupportedError') {
+                errorMessage = 'Tu navegador no soporta acceso a cámara.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
 
             toast.current?.show({
                 severity: 'error',
-                summary: 'Error',
+                summary: 'Error de cámara',
                 detail: errorMessage,
-                life: 5000
+                life: 6000
             });
 
             setIsScanning(false);
+
+            // Limpiar scanner si falló
+            if (scannerRef.current) {
+                scannerRef.current.destroy();
+                scannerRef.current = null;
+            }
         }
     };
 
@@ -276,19 +323,82 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
     };
 
     const startScanner = async () => {
-        if (scannerRef.current) {
+        try {
+            // Si no existe scanner, inicializar primero
+            if (!scannerRef.current) {
+                await initializeScanner();
+                return;
+            }
+
+            // Si ya existe scanner, solo iniciarlo
+            await scannerRef.current.start();
+            setIsScanning(true);
+
+            toast.current?.show({
+                severity: 'success',
+                summary: 'Scanner activado',
+                detail: 'El scanner está listo para escanear',
+                life: 2000
+            });
+
+        } catch (error) {
+            console.error('Error iniciando scanner:', error);
+
+            // Si falla, intentar reinicializar completamente
             try {
-                await scannerRef.current.start();
-                setIsScanning(true);
-            } catch (error) {
-                console.error('Error reiniciando scanner:', error);
+                if (scannerRef.current) {
+                    scannerRef.current.destroy();
+                    scannerRef.current = null;
+                }
+                await initializeScanner();
+            } catch (retryError) {
+                console.error('Error reinicializando scanner:', retryError);
                 toast.current?.show({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'No se pudo reiniciar el scanner',
-                    life: 3000
+                    detail: 'No se pudo iniciar el scanner. Verifica los permisos de cámara.',
+                    life: 5000
                 });
             }
+        }
+    };
+
+    const reinitializeScanner = async () => {
+        try {
+            // Limpiar todo y empezar de nuevo
+            if (scannerRef.current) {
+                scannerRef.current.destroy();
+                scannerRef.current = null;
+            }
+
+            setIsScanning(false);
+            setCameras([]);
+            setSelectedCamera(null);
+
+            // Verificar permisos nuevamente
+            localStorage.removeItem('qr-scanner-permission-granted');
+            localStorage.removeItem('qr-scanner-permission-requested');
+            setPermissionGranted(false);
+            setPermissionRequested(false);
+
+            toast.current?.show({
+                severity: 'info',
+                summary: 'Reinicializando...',
+                detail: 'Configurando scanner desde el inicio',
+                life: 2000
+            });
+
+            // Solicitar permisos nuevamente
+            await requestCameraPermission();
+
+        } catch (error) {
+            console.error('Error reinicializando:', error);
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'No se pudo reinicializar el scanner',
+                life: 4000
+            });
         }
     };
 
@@ -339,6 +449,17 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                     severity={isScanning ? "warning" : "success"}
                     tooltip={isScanning ? "Pausar scanner" : "Iniciar scanner"}
                     onClick={isScanning ? stopScanner : startScanner}
+                    disabled={loading}
+                    style={{ padding: '0.5rem' }}
+                />
+
+                <Button
+                    icon="pi pi-replay"
+                    rounded
+                    outlined
+                    severity="help"
+                    tooltip="Reinicializar scanner"
+                    onClick={reinitializeScanner}
                     disabled={loading}
                     style={{ padding: '0.5rem' }}
                 />
