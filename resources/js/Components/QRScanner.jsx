@@ -28,8 +28,18 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
 
     const initializeScanner = async () => {
         try {
+            // Verificar soporte de getUserMedia
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Tu navegador no soporta acceso a cámara');
+            }
+
             // Listar cámaras disponibles
             const cameraList = await QrScanner.listCameras(true);
+
+            if (!cameraList || cameraList.length === 0) {
+                throw new Error('No se encontraron cámaras disponibles');
+            }
+
             setCameras(cameraList);
 
             // Buscar cámara trasera preferentemente
@@ -43,15 +53,21 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
             setSelectedCamera(preferredCamera);
 
             // Crear el scanner
+            const config = {
+                returnDetailedScanResult: true,
+                highlightScanRegion: true,
+                highlightCodeOutline: true,
+            };
+
+            // Solo establecer preferredCamera si existe y tiene id
+            if (preferredCamera?.id) {
+                config.preferredCamera = preferredCamera.id;
+            }
+
             scannerRef.current = new QrScanner(
                 videoRef.current,
                 result => handleScan(result.data),
-                {
-                    returnDetailedScanResult: true,
-                    highlightScanRegion: true,
-                    highlightCodeOutline: true,
-                    preferredCamera: preferredCamera?.id || 'environment'
-                }
+                config
             );
 
             await scannerRef.current.start();
@@ -59,17 +75,27 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
 
         } catch (error) {
             console.error('Error inicializando scanner:', error);
+            const errorMessage = error.message || 'No se pudo acceder a la cámara. Verifique los permisos.';
+
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'No se pudo acceder a la cámara. Verifique los permisos.',
+                detail: errorMessage,
                 life: 5000
             });
+
+            setIsScanning(false);
         }
     };
 
     const handleScan = (data) => {
         if (data && !loading) {
+            // Detener el scanner brevemente para evitar múltiples escaneos
+            if (scannerRef.current && isScanning) {
+                scannerRef.current.stop();
+                setIsScanning(false);
+            }
+
             // Vibrar si está disponible
             if (navigator.vibrate) {
                 navigator.vibrate(200);
@@ -169,8 +195,15 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
     };
 
     const footerContent = (
-        <div className="flex justify-between align-items-center w-full">
-            <div className="flex gap-2">
+        <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: '100%',
+            flexWrap: 'wrap',
+            gap: '0.5rem'
+        }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {cameras.length > 1 && (
                     <Button
                         icon="pi pi-refresh"
@@ -179,6 +212,7 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                         tooltip="Cambiar cámara"
                         onClick={switchCamera}
                         disabled={loading}
+                        style={{ padding: '0.5rem' }}
                     />
                 )}
 
@@ -189,6 +223,7 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                     tooltip="Flash"
                     onClick={toggleFlash}
                     disabled={loading}
+                    style={{ padding: '0.5rem' }}
                 />
 
                 <Button
@@ -198,6 +233,7 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                     tooltip={isScanning ? "Pausar scanner" : "Iniciar scanner"}
                     onClick={isScanning ? stopScanner : startScanner}
                     disabled={loading}
+                    style={{ padding: '0.5rem' }}
                 />
             </div>
 
@@ -205,7 +241,8 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                 label="Cerrar"
                 icon="pi pi-times"
                 onClick={handleHide}
-                className="p-button-secondary"
+                severity="secondary"
+                style={{ minWidth: '100px' }}
             />
         </div>
     );
@@ -219,36 +256,49 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                 visible={visible}
                 onHide={handleHide}
                 footer={footerContent}
-                style={{ width: '90vw', maxWidth: '600px' }}
+                style={{ width: '40vw', maxWidth: '600px' }}
                 modal
                 closable={false}
                 className="scanner-dialog"
+                contentStyle={{ padding: '1rem' }}
             >
-                <div className="flex flex-column align-items-center">
-                    <div className="scanner-container relative mb-3">
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                    <div className="scanner-container" style={{ position: 'relative', width: '100%' }}>
                         <video
                             ref={videoRef}
                             style={{
                                 width: '100%',
-                                maxWidth: '500px',
                                 height: 'auto',
                                 aspectRatio: '4/3',
                                 backgroundColor: '#000',
-                                borderRadius: '8px'
+                                borderRadius: '8px',
+                                display: 'block'
                             }}
                             playsInline
                         />
 
                         {loading && (
-                            <div className="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center bg-black-alpha-50 border-round">
-                                <i className="pi pi-spin pi-spinner text-white" style={{ fontSize: '2rem' }} />
-                                <span className="text-white ml-2">Procesando...</span>
+                            <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                borderRadius: '8px',
+                                gap: '0.5rem'
+                            }}>
+                                <i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem', color: '#fff' }} />
+                                <span style={{ color: '#fff' }}>Procesando...</span>
                             </div>
                         )}
                     </div>
 
-                    <div className="text-center">
-                        <p className="text-sm text-600 m-0">
+                    <div style={{ textAlign: 'center', width: '100%' }}>
+                        <p style={{ fontSize: '0.875rem', color: '#666', margin: '0 0 0.5rem 0' }}>
                             {isScanning
                                 ? "Apunte la cámara hacia el código QR o código de barras"
                                 : "Scanner pausado - presione play para continuar"
@@ -256,7 +306,7 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                         </p>
 
                         {selectedCamera && (
-                            <p className="text-xs text-400 mt-1 mb-0">
+                            <p style={{ fontSize: '0.75rem', color: '#999', margin: '0.5rem 0 0 0' }}>
                                 Cámara: {selectedCamera.label}
                             </p>
                         )}
@@ -265,21 +315,34 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
             </Dialog>
 
             <style jsx>{`
-                .scanner-dialog .p-dialog-content {
+                .scanner-dialog :global(.p-dialog) {
+                    margin: 0;
+                    border-radius: 8px;
+                }
+
+                .scanner-dialog :global(.p-dialog-content) {
                     padding: 1rem;
                 }
 
-                .scanner-container {
-                    position: relative;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
+                .scanner-dialog :global(.p-dialog-footer) {
+                    padding: 1rem;
+                    border-top: 1px solid #e0e0e0;
                 }
 
-                /* Estilos para resaltar la región de escaneo */
-                :global(.scan-region-highlight) {
-                    border: 2px solid #22c55e !important;
-                    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5) !important;
+                @media (max-width: 600px) {
+                    .scanner-dialog :global(.p-dialog) {
+                        width: 95vw !important;
+                        max-width: 100% !important;
+                    }
+
+                    .scanner-dialog :global(.p-dialog-content) {
+                        padding: 0.75rem;
+                    }
+
+                    .scanner-dialog :global(.p-dialog-footer) {
+                        padding: 0.75rem;
+                        flex-direction: column;
+                    }
                 }
             `}</style>
         </>
