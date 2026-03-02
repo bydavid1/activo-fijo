@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import QrScanner from 'qr-scanner';
+import Quagga from '@ericblade/quagga2';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
@@ -7,10 +8,12 @@ import { Toast } from 'primereact/toast';
 const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
     const videoRef = useRef(null);
     const scannerRef = useRef(null);
+    const quaggaRef = useRef(null);
     const toast = useRef(null);
     const [isScanning, setIsScanning] = useState(false);
     const [cameras, setCameras] = useState([]);
     const [selectedCamera, setSelectedCamera] = useState(null);
+    const [scannerType, setScannerType] = useState('hybrid'); // 'qr', 'barcode', or 'hybrid'
     const [permissionRequested, setPermissionRequested] = useState(() => {
         return localStorage.getItem('qr-scanner-permission-requested') === 'true';
     });
@@ -116,6 +119,72 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
         }
     };
 
+    const initializeBarcodeScanner = async () => {
+        try {
+            if (!videoRef.current) {
+                throw new Error('Elemento de video no disponible');
+            }
+
+            const config = {
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: videoRef.current,
+                    constraints: {
+                        width: 640,
+                        height: 480,
+                        facingMode: "environment" // Cámara trasera
+                    }
+                },
+                locator: {
+                    patchSize: "medium",
+                    halfSample: true
+                },
+                numOfWorkers: 2,
+                frequency: 10,
+                decoder: {
+                    readers: [
+                        "code_128_reader",
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_39_reader",
+                        "code_39_vin_reader",
+                        "codabar_reader",
+                        "upc_reader",
+                        "upc_e_reader",
+                        "i2of5_reader",
+                        "2of5_reader",
+                        "code_93_reader"
+                    ]
+                },
+                locate: true
+            };
+
+            Quagga.init(config, (err) => {
+                if (err) {
+                    console.error('Error inicializando Quagga:', err);
+                    throw err;
+                }
+
+                console.log("Quagga inicializado correctamente");
+                Quagga.start();
+
+                // Handler para cuando se detecta un código de barras
+                Quagga.onDetected((result) => {
+                    console.log('Código de barras detectado:', result.codeResult.code);
+                    handleScan(result.codeResult.code, 'barcode');
+                });
+
+                setIsScanning(true);
+                quaggaRef.current = true;
+            });
+
+        } catch (error) {
+            console.error('Error inicializando scanner de códigos de barras:', error);
+            throw error;
+        }
+    };
+
     const initializeScanner = async () => {
         try {
             // Verificar que tenemos el elemento video
@@ -141,6 +210,63 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                 throw permError;
             }
 
+            // En modo híbrido, inicializar ambos scanners
+            if (scannerType === 'hybrid') {
+                await Promise.all([
+                    initializeQRScanner(),
+                    initializeBarcodeScanner()
+                ]);
+            } else if (scannerType === 'qr') {
+                await initializeQRScanner();
+            } else if (scannerType === 'barcode') {
+                await initializeBarcodeScanner();
+            }
+
+            toast.current?.show({
+                severity: 'success',
+                summary: 'Scanner listo',
+                detail: `Scanner ${scannerType === 'hybrid' ? 'híbrido' : scannerType} iniciado correctamente`,
+                life: 2000
+            });
+
+        } catch (error) {
+            console.error('Error inicializando scanner:', error);
+
+            let errorMessage = 'No se pudo inicializar la cámara.';
+            if (error.name === 'NotAllowedError') {
+                errorMessage = 'Permisos de cámara denegados. Por favor, permite el acceso y recarga la página.';
+                setPermissionGranted(false);
+            } else if (error.name === 'NotFoundError') {
+                errorMessage = 'No se encontró ninguna cámara en este dispositivo.';
+            } else if (error.name === 'NotSupportedError') {
+                errorMessage = 'Tu navegador no soporta acceso a cámara.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error de cámara',
+                detail: errorMessage,
+                life: 6000
+            });
+
+            setIsScanning(false);
+
+            // Limpiar scanner si falló
+            if (scannerRef.current) {
+                scannerRef.current.destroy();
+                scannerRef.current = null;
+            }
+            if (quaggaRef.current) {
+                Quagga.stop();
+                quaggaRef.current = null;
+            }
+        }
+    };
+
+    const initializeQRScanner = async () => {
+
             // Listar cámaras disponibles
             const cameraList = await QrScanner.listCameras(true);
 
@@ -160,11 +286,31 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
             const preferredCamera = backCamera || cameraList[0];
             setSelectedCamera(preferredCamera);
 
-            // Crear el scanner
+            // Crear el scanner con soporte para QR y códigos de barras
             const config = {
                 returnDetailedScanResult: true,
                 highlightScanRegion: true,
                 highlightCodeOutline: true,
+                // Habilitar múltiples formatos de código de barras
+                scanRegion: {
+                    x: 0.1,
+                    y: 0.1,
+                    width: 0.8,
+                    height: 0.8
+                },
+                // Configuración para mejorar detección de códigos de barras
+                maxScansPerSecond: 5,
+                calculateScanRegion: (video) => {
+                    // Región más amplia para códigos de barras
+                    const smallestDimension = Math.min(video.videoWidth, video.videoHeight);
+                    const scanRegionSize = Math.round(smallestDimension * 0.8);
+                    return {
+                        x: Math.round((video.videoWidth - scanRegionSize) / 2),
+                        y: Math.round((video.videoHeight - scanRegionSize) / 2),
+                        width: scanRegionSize,
+                        height: scanRegionSize
+                    };
+                }
             };
 
             // Solo establecer preferredCamera si existe y tiene id

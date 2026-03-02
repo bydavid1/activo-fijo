@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
-import QRScanner from '@/Components/QRScanner';
+import QRBarcodeScanner from '@/Components/QRBarcodeScanner';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
@@ -97,7 +97,7 @@ export default function Scanner({ user, auditId }) {
         try {
             setScanning(true);
 
-            // El scanner se pausa automáticamente en el componente QRScanner
+            // El scanner se pausa automáticamente en el componente QRBarcodeScanner
             // No cerramos el modal para que el usuario pueda seguir escaneando
 
             // Extraer código si viene como JSON
@@ -442,7 +442,7 @@ export default function Scanner({ user, auditId }) {
             </Card>
 
             {/* Scanner de cámara */}
-            <QRScanner
+            <QRBarcodeScanner
                 visible={showScanner}
                 onHide={() => setShowScanner(false)}
                 onScan={handleScan}
