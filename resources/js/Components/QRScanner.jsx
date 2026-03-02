@@ -226,20 +226,24 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
     };
 
     const handleScan = (data) => {
-        if (data && !loading) {
-            // Detener el scanner brevemente para evitar múltiples escaneos
+        if (data) {
+            // SIEMPRE pausar la cámara primero cuando se detecta un código
             if (scannerRef.current && isScanning) {
+                console.log('Pausando cámara después de escanear:', data);
                 scannerRef.current.stop();
                 setIsScanning(false);
             }
 
-            // Vibrar si está disponible
-            if (navigator.vibrate) {
-                navigator.vibrate(200);
-            }
+            // Solo procesar si no estamos ya procesando algo
+            if (!loading) {
+                // Vibrar si está disponible
+                if (navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
 
-            // Llamar callback con el código escaneado
-            onScan(data);
+                // Llamar callback con el código escaneado
+                onScan(data);
+            }
         }
     };
 
