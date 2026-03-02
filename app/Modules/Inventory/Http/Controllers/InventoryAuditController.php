@@ -94,8 +94,8 @@ class InventoryAuditController extends Controller
                     'datos_esperados' => [
                         'responsable_id' => $activo->responsable_id,
                         'ubicacion_id' => $activo->ubicacion_id,
-                        'estado_fisico' => $activo->estado_fisico,
-                        'codigo' => $activo->codigo_qr ?: $activo->codigo_barras,
+                        'estado_fisico' => $activo->estado_fisico ?? null,
+                        'codigo' => $activo->codigo,
                     ]
                 ]);
             }
@@ -189,11 +189,8 @@ class InventoryAuditController extends Controller
         DB::beginTransaction();
 
         try {
-            // Buscar el activo por código QR o código de barras
-            $activo = Asset::where(function($query) use ($validated) {
-                $query->where('codigo_qr', $validated['codigo'])
-                      ->orWhere('codigo_barras', $validated['codigo']);
-            })->first();
+            // Buscar el activo por código
+            $activo = Asset::where('codigo', $validated['codigo'])->first();
 
             if (!$activo) {
                 // Activo extra (no esperado)

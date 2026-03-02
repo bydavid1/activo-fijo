@@ -97,8 +97,46 @@ export default function Scanner({ user, auditId }) {
         try {
             setScanning(true);
 
+            // Extraer código si viene como JSON
+            let codigoFinal = codigo;
+
+            console.log('Código recibido del scanner:', codigo);
+            console.log('Tipo de código:', typeof codigo);
+
+            // Si el código es un objeto o string JSON, extraer el código
+            if (typeof codigo === 'object' && codigo !== null) {
+                // Si es un objeto directamente
+                codigoFinal = codigo.codigo || codigo.id || String(codigo);
+                console.log('Código extraído de objeto:', codigoFinal);
+            } else if (typeof codigo === 'string') {
+                // Si es string, verificar si es JSON
+                const codigoTrimmed = codigo.trim();
+                if (codigoTrimmed.startsWith('{') && codigoTrimmed.endsWith('}')) {
+                    try {
+                        const objetoEscaneado = JSON.parse(codigoTrimmed);
+                        codigoFinal = objetoEscaneado.codigo || objetoEscaneado.id || codigoTrimmed;
+                        console.log('Código extraído de JSON string:', codigoFinal);
+                    } catch (parseError) {
+                        console.log('Error parseando JSON, usando string original:', codigoTrimmed);
+                        codigoFinal = codigoTrimmed;
+                    }
+                } else {
+                    codigoFinal = codigoTrimmed;
+                    console.log('Código como string simple:', codigoFinal);
+                }
+            }
+
+            // Asegurar que sea string y no esté vacío
+            codigoFinal = String(codigoFinal).trim();
+
+            if (!codigoFinal) {
+                throw new Error('Código escaneado está vacío');
+            }
+
+            console.log('Código final a enviar:', codigoFinal);
+
             const response = await axios.post(`/api/inventory-audits/${auditId}/escanear`, {
-                codigo: codigo.trim(),
+                codigo: codigoFinal,
                 observaciones: ''
             });
 
@@ -131,14 +169,7 @@ export default function Scanner({ user, auditId }) {
             }
         } catch (error) {
             console.error('Error al escanear:', error);
-            const errorMsg = error.response?.data?.message || 'Error al procesar el escaneo';
-
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error',
-                detail: errorMsg,
-                life: 5000
-            });
+            const errorMsg = error.response?.data?.message || error.message || 'Error al procesar el escaneo';
         } finally {
             setScanning(false);
         }
