@@ -6,8 +6,6 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
 import { ProgressBar } from 'primereact/progressbar';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { InputText } from 'primereact/inputtext';

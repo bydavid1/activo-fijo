@@ -1,16 +1,20 @@
 import React, { useRef, useEffect, useState } from 'react';
-import QrScanner from 'qr-scanner';
+import { BrowserMultiFormatReader, BrowserCodeReader } from '@zxing/browser';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 
 const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
     const videoRef = useRef(null);
-    const scannerRef = useRef(null);
+    const readerRef = useRef(null);
+    const controlsRef = useRef(null);
+    const streamRef = useRef(null);
     const toast = useRef(null);
+    const processingRef = useRef(false);
     const [isScanning, setIsScanning] = useState(false);
     const [cameras, setCameras] = useState([]);
     const [selectedCamera, setSelectedCamera] = useState(null);
+    const [flashOn, setFlashOn] = useState(false);
     const [permissionRequested, setPermissionRequested] = useState(() => {
         return localStorage.getItem('qr-scanner-permission-requested') === 'true';
     });
@@ -20,26 +24,18 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
     const [showPermissionDialog, setShowPermissionDialog] = useState(false);
 
     useEffect(() => {
-        // Verificar permisos al abrir el dialog
         if (visible) {
             const hasPermissions = localStorage.getItem('qr-scanner-permission-granted') === 'true';
-
             if (hasPermissions) {
                 setPermissionGranted(true);
                 setPermissionRequested(true);
-                if (videoRef.current) {
-                    initializeScanner();
-                }
             } else if (!permissionRequested) {
                 setShowPermissionDialog(true);
             }
         }
 
         return () => {
-            if (scannerRef.current) {
-                scannerRef.current.destroy();
-                scannerRef.current = null;
-            }
+            cleanupScanner();
         };
     }, [visible]);
 
@@ -50,22 +46,16 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
         }
     }, [permissionGranted, visible, showPermissionDialog]);
 
-    // Efecto para reanudar el scanner cuando loading cambia de true a false
     const prevLoadingRef = useRef(loading);
     useEffect(() => {
-        // Si loading cambió de true a false, reanudar el scanner
         if (prevLoadingRef.current === true && loading === false) {
-            if (scannerRef.current && !isScanning) {
-                console.log('Loading terminó, reanudando scanner...');
-                scannerRef.current.start().then(() => {
-                    setIsScanning(true);
-                }).catch(err => {
-                    console.error('Error reanudando scanner:', err);
-                });
+            processingRef.current = false;
+            if (!isScanning && permissionGranted && selectedCamera) {
+                startScanningWithDevice(selectedCamera.deviceId);
             }
         }
         prevLoadingRef.current = loading;
-    }, [loading, isScanning]);
+    }, [loading]);
 
     const requestCameraPermission = async () => {
         try {
@@ -116,33 +106,20 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
         }
     };
 
+    const cleanupScanner = () => {
+        if (controlsRef.current) {
+            try { controlsRef.current.stop(); } catch (e) {}
+            controlsRef.current = null;
+        }
+        setIsScanning(false);
+        processingRef.current = false;
+    };
+
     const initializeScanner = async () => {
         try {
-            // Verificar que tenemos el elemento video
-            if (!videoRef.current) {
-                throw new Error('Elemento de video no disponible');
-            }
+            if (!videoRef.current) return;
 
-            // Verificar soporte de getUserMedia
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error('Tu navegador no soporta acceso a cámara');
-            }
-
-            // Verificar permisos explícitamente
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                stream.getTracks().forEach(track => track.stop()); // Detener stream temporal
-            } catch (permError) {
-                if (permError.name === 'NotAllowedError') {
-                    // Limpiar localStorage si se denegaron permisos
-                    localStorage.removeItem('qr-scanner-permission-granted');
-                    localStorage.removeItem('qr-scanner-permission-requested');
-                }
-                throw permError;
-            }
-
-            // Listar cámaras disponibles
-            const cameraList = await QrScanner.listCameras(true);
+            const cameraList = await BrowserCodeReader.listVideoInputDevices();
 
             if (!cameraList || cameraList.length === 0) {
                 throw new Error('No se encontraron cámaras disponibles');
@@ -150,114 +127,78 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
 
             setCameras(cameraList);
 
-            // Buscar cámara trasera preferentemente
-            const backCamera = cameraList.find(camera =>
-                camera.label.toLowerCase().includes('back') ||
-                camera.label.toLowerCase().includes('rear') ||
-                camera.label.toLowerCase().includes('trasera')
+            const backCamera = cameraList.find(cam =>
+                cam.label.toLowerCase().includes('back') ||
+                cam.label.toLowerCase().includes('rear') ||
+                cam.label.toLowerCase().includes('trasera') ||
+                cam.label.toLowerCase().includes('environment')
             );
+            const preferred = backCamera || cameraList[0];
+            setSelectedCamera(preferred);
 
-            const preferredCamera = backCamera || cameraList[0];
-            setSelectedCamera(preferredCamera);
-
-            // Crear el scanner
-            const config = {
-                returnDetailedScanResult: true,
-                highlightScanRegion: true,
-                highlightCodeOutline: true,
-            };
-
-            // Solo establecer preferredCamera si existe y tiene id
-            if (preferredCamera?.id) {
-                config.preferredCamera = preferredCamera.id;
-            }
-
-            // Limpiar scanner anterior si existe
-            if (scannerRef.current) {
-                scannerRef.current.destroy();
-            }
-
-            scannerRef.current = new QrScanner(
-                videoRef.current,
-                result => handleScan(result.data),
-                config
-            );
-
-            await scannerRef.current.start();
-            setIsScanning(true);
+            await startScanningWithDevice(preferred.deviceId);
 
             toast.current?.show({
                 severity: 'success',
                 summary: 'Scanner listo',
-                detail: 'Cámara iniciada correctamente',
+                detail: 'Detecta QR y códigos de barras',
                 life: 2000
             });
 
         } catch (error) {
             console.error('Error inicializando scanner:', error);
-
             let errorMessage = 'No se pudo inicializar la cámara.';
             if (error.name === 'NotAllowedError') {
-                errorMessage = 'Permisos de cámara denegados. Por favor, permite el acceso y recarga la página.';
+                errorMessage = 'Permisos de cámara denegados. Permite el acceso y recarga la página.';
                 setPermissionGranted(false);
+                localStorage.removeItem('qr-scanner-permission-granted');
             } else if (error.name === 'NotFoundError') {
                 errorMessage = 'No se encontró ninguna cámara en este dispositivo.';
-            } else if (error.name === 'NotSupportedError') {
-                errorMessage = 'Tu navegador no soporta acceso a cámara.';
             } else if (error.message) {
                 errorMessage = error.message;
             }
-
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error de cámara',
-                detail: errorMessage,
-                life: 6000
-            });
-
+            toast.current?.show({ severity: 'error', summary: 'Error de cámara', detail: errorMessage, life: 6000 });
             setIsScanning(false);
-
-            // Limpiar scanner si falló
-            if (scannerRef.current) {
-                scannerRef.current.destroy();
-                scannerRef.current = null;
-            }
         }
     };
 
-    const handleScan = (data) => {
-        if (data) {
-            // SIEMPRE pausar la cámara primero cuando se detecta un código
-            if (scannerRef.current && isScanning) {
-                console.log('Pausando cámara después de escanear:', data);
-                scannerRef.current.stop();
-                setIsScanning(false);
-            }
+    const startScanningWithDevice = async (deviceId) => {
+        cleanupScanner();
 
-            // Solo procesar si no estamos ya procesando algo
-            if (!loading) {
-                // Vibrar si está disponible
-                if (navigator.vibrate) {
-                    navigator.vibrate(200);
+        try {
+            const reader = new BrowserMultiFormatReader();
+            readerRef.current = reader;
+
+            controlsRef.current = await reader.decodeFromVideoDevice(
+                deviceId,
+                videoRef.current,
+                (result, error) => {
+                    if (result && !processingRef.current) {
+                        processingRef.current = true;
+                        if (navigator.vibrate) navigator.vibrate(200);
+                        cleanupScanner();
+                        onScan(result.getText());
+                    }
                 }
+            );
 
-                // Llamar callback con el código escaneado
-                onScan(data);
-            }
+            setIsScanning(true);
+
+            // Guardar stream para control de flash
+            setTimeout(() => {
+                if (videoRef.current?.srcObject) {
+                    streamRef.current = videoRef.current.srcObject;
+                }
+            }, 500);
+
+        } catch (error) {
+            console.error('Error iniciando scanner con dispositivo:', error);
+            setIsScanning(false);
+            throw error;
         }
     };
 
     const switchCamera = async () => {
-        if (!scannerRef.current) {
-            toast.current?.show({
-                severity: 'warn',
-                summary: 'Scanner no disponible',
-                detail: 'El scanner debe estar activo para cambiar de cámara',
-                life: 3000
-            });
-            return;
-        }
-
         if (cameras.length <= 1) {
             toast.current?.show({
                 severity: 'info',
@@ -269,12 +210,11 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
         }
 
         try {
-            const currentIndex = cameras.findIndex(cam => cam.id === selectedCamera?.id);
-            const nextIndex = (currentIndex + 1) % cameras.length;
-            const nextCamera = cameras[nextIndex];
-
-            await scannerRef.current.setCamera(nextCamera.id);
+            const currentIndex = cameras.findIndex(cam => cam.deviceId === selectedCamera?.deviceId);
+            const nextCamera = cameras[(currentIndex + 1) % cameras.length];
             setSelectedCamera(nextCamera);
+
+            await startScanningWithDevice(nextCamera.deviceId);
 
             toast.current?.show({
                 severity: 'success',
@@ -294,7 +234,8 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
     };
 
     const toggleFlash = async () => {
-        if (!scannerRef.current) {
+        const stream = streamRef.current || videoRef.current?.srcObject;
+        if (!stream) {
             toast.current?.show({
                 severity: 'warn',
                 summary: 'Scanner no disponible',
@@ -304,27 +245,31 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
             return;
         }
 
+        const track = stream.getVideoTracks()[0];
+        if (!track) return;
+
         try {
-            const hasFlash = await scannerRef.current.hasFlash();
-
-            if (hasFlash) {
-                const isFlashOn = await scannerRef.current.isFlashOn();
-                await scannerRef.current.turnFlashOnOff(!isFlashOn);
-
-                toast.current?.show({
-                    severity: 'success',
-                    summary: isFlashOn ? 'Flash desactivado' : 'Flash activado',
-                    detail: isFlashOn ? 'El flash se ha apagado' : 'El flash se ha encendido',
-                    life: 2000
-                });
-            } else {
+            const capabilities = track.getCapabilities?.() || {};
+            if (!capabilities.torch) {
                 toast.current?.show({
                     severity: 'warn',
                     summary: 'Flash no disponible',
                     detail: 'Esta cámara no tiene flash o no es compatible',
                     life: 4000
                 });
+                return;
             }
+
+            const newState = !flashOn;
+            await track.applyConstraints({ advanced: [{ torch: newState }] });
+            setFlashOn(newState);
+
+            toast.current?.show({
+                severity: 'success',
+                summary: newState ? 'Flash activado' : 'Flash desactivado',
+                detail: newState ? 'El flash se ha encendido' : 'El flash se ha apagado',
+                life: 2000
+            });
         } catch (error) {
             console.error('Error con flash:', error);
             toast.current?.show({
@@ -337,98 +282,55 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
     };
 
     const stopScanner = () => {
-        if (scannerRef.current) {
-            scannerRef.current.stop();
-            setIsScanning(false);
-        }
+        cleanupScanner();
     };
 
     const startScanner = async () => {
+        if (!selectedCamera) {
+            await initializeScanner();
+            return;
+        }
         try {
-            // Si no existe scanner, inicializar primero
-            if (!scannerRef.current) {
-                await initializeScanner();
-                return;
-            }
-
-            // Si ya existe scanner, solo iniciarlo
-            await scannerRef.current.start();
-            setIsScanning(true);
-
+            await startScanningWithDevice(selectedCamera.deviceId);
             toast.current?.show({
                 severity: 'success',
                 summary: 'Scanner activado',
                 detail: 'El scanner está listo para escanear',
                 life: 2000
             });
-
         } catch (error) {
             console.error('Error iniciando scanner:', error);
-
-            // Si falla, intentar reinicializar completamente
-            try {
-                if (scannerRef.current) {
-                    scannerRef.current.destroy();
-                    scannerRef.current = null;
-                }
-                await initializeScanner();
-            } catch (retryError) {
-                console.error('Error reinicializando scanner:', retryError);
-                toast.current?.show({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'No se pudo iniciar el scanner. Verifica los permisos de cámara.',
-                    life: 5000
-                });
-            }
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'No se pudo iniciar el scanner. Verifica los permisos de cámara.',
+                life: 5000
+            });
         }
     };
 
     const reinitializeScanner = async () => {
-        try {
-            // Limpiar todo y empezar de nuevo
-            if (scannerRef.current) {
-                scannerRef.current.destroy();
-                scannerRef.current = null;
-            }
+        cleanupScanner();
+        setCameras([]);
+        setSelectedCamera(null);
+        setFlashOn(false);
+        localStorage.removeItem('qr-scanner-permission-granted');
+        localStorage.removeItem('qr-scanner-permission-requested');
+        setPermissionGranted(false);
+        setPermissionRequested(false);
 
-            setIsScanning(false);
-            setCameras([]);
-            setSelectedCamera(null);
+        toast.current?.show({
+            severity: 'info',
+            summary: 'Reinicializando...',
+            detail: 'Configurando scanner desde el inicio',
+            life: 2000
+        });
 
-            // Verificar permisos nuevamente
-            localStorage.removeItem('qr-scanner-permission-granted');
-            localStorage.removeItem('qr-scanner-permission-requested');
-            setPermissionGranted(false);
-            setPermissionRequested(false);
-
-            toast.current?.show({
-                severity: 'info',
-                summary: 'Reinicializando...',
-                detail: 'Configurando scanner desde el inicio',
-                life: 2000
-            });
-
-            // Solicitar permisos nuevamente
-            await requestCameraPermission();
-
-        } catch (error) {
-            console.error('Error reinicializando:', error);
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'No se pudo reinicializar el scanner',
-                life: 4000
-            });
-        }
+        await requestCameraPermission();
     };
 
     const handleHide = () => {
-        if (scannerRef.current) {
-            scannerRef.current.destroy();
-            scannerRef.current = null;
-        }
-        setIsScanning(false);
+        cleanupScanner();
         onHide();
     };
 
@@ -552,7 +454,7 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
 
             {/* Dialog principal del scanner */}
             <Dialog
-                header="Escáner de Códigos QR/Barras"
+                header="Escáner QR y Códigos de Barras"
                 visible={visible && permissionGranted && !showPermissionDialog}
                 onHide={handleHide}
                 footer={footerContent}
@@ -606,8 +508,15 @@ const QRScanner = ({ visible, onHide, onScan, loading = false }) => {
                                 }
                             </p>
 
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap', margin: '0.25rem 0' }}>
+                                <span style={{ fontSize: '0.68rem', background: '#e3f2fd', color: '#1565c0', padding: '2px 8px', borderRadius: '12px' }}>QR Code</span>
+                                <span style={{ fontSize: '0.68rem', background: '#e8f5e9', color: '#2e7d32', padding: '2px 8px', borderRadius: '12px' }}>EAN-13 / EAN-8</span>
+                                <span style={{ fontSize: '0.68rem', background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '12px' }}>Code 128 / 39</span>
+                                <span style={{ fontSize: '0.68rem', background: '#f3e5f5', color: '#6a1b9a', padding: '2px 8px', borderRadius: '12px' }}>UPC-A / UPC-E</span>
+                            </div>
+
                             {selectedCamera && (
-                                <p style={{ fontSize: '0.75rem', color: '#999', margin: '0.5rem 0 0 0' }}>
+                                <p style={{ fontSize: '0.75rem', color: '#999', margin: '0.25rem 0 0 0' }}>
                                     Cámara: {selectedCamera.label}
                                 </p>
                             )}
