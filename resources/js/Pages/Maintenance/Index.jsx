@@ -15,6 +15,7 @@ import axios from 'axios';
 
 const Maintenance = ({ user }) => {
     const [orders, setOrders] = useState([]);
+    const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [displayDialog, setDisplayDialog] = useState(false);
     const [editingOrder, setEditingOrder] = useState(null);
@@ -46,6 +47,7 @@ const Maintenance = ({ user }) => {
 
     useEffect(() => {
         fetchOrders();
+        fetchAssets();
     }, []);
 
     const fetchOrders = async () => {
@@ -56,6 +58,16 @@ const Maintenance = ({ user }) => {
         } catch (error) {
             toast.current.show({ severity: 'error', summary: 'Error', detail: 'Error cargando órdenes' });
             setLoading(false);
+        }
+    };
+
+    const fetchAssets = async () => {
+        try {
+            const response = await axios.get('/api/assets?per_page=500');
+            const data = response.data.data || response.data;
+            setAssets(data.map(a => ({ label: `${a.codigo} - ${a.nombre}`, value: a.id })));
+        } catch (error) {
+            // silencioso
         }
     };
 
@@ -183,7 +195,15 @@ const Maintenance = ({ user }) => {
                     responsiveLayout="scroll"
                 >
                     <Column field="numero" header="Número" sortable style={{ minWidth: '100px' }} />
-                    <Column field="asset_id" header="Asset ID" style={{ minWidth: '80px' }} className="hide-on-mobile" />
+                    <Column
+                        header="Activo"
+                        style={{ minWidth: '150px' }}
+                        className="hide-on-mobile"
+                        body={(rowData) => rowData.activo
+                            ? `${rowData.activo.codigo} - ${rowData.activo.nombre}`
+                            : rowData.asset_id
+                        }
+                    />
                     <Column field="tipo" header="Tipo" style={{ minWidth: '100px' }} />
                     <Column field="descripcion" header="Descripción" style={{ minWidth: '150px' }} className="hide-on-mobile" />
                     <Column
@@ -218,6 +238,20 @@ const Maintenance = ({ user }) => {
                 onHide={() => setDisplayDialog(false)}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                        <label className="block text-sm font-semibold mb-2">Activo <span className="text-red-500">*</span></label>
+                        <Dropdown
+                            value={formData.asset_id}
+                            onChange={(e) => setFormData({ ...formData, asset_id: e.value })}
+                            options={assets}
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Seleccione un activo"
+                            filter
+                            filterPlaceholder="Buscar activo..."
+                            className="w-full"
+                        />
+                    </div>
                     <div>
                         <label className="block text-sm font-semibold mb-2">Tipo</label>
                         <Dropdown
