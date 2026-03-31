@@ -147,6 +147,7 @@ export default function AppLayout({ children, user }) {
                 { label: 'Categorías', href: '/categories', permission: 'admin.manage_config' },
                 { label: 'Ubicaciones', href: '/locations', permission: 'admin.manage_config' },
                 { label: 'Proveedores', href: '/suppliers', permission: 'suppliers.view' },
+                { label: 'Configuración', href: '/settings', permission: 'admin.manage_config' },
             ]
         },
         {

@@ -34,10 +34,21 @@ class Asset extends Model
         'fecha_inicio_depreciacion',
         'estado',
         'tipo_adquisicion',
+        'propiedad',
+        'depreciable',
         'orden_compra',
         'numero_factura',
         'donante_nombre',
         'donacion_documento',
+        'tipo_leasing',
+        'valor_estimado',
+        'depreciacion_acumulada_transferencia',
+        'vida_util_restante',
+        'responsable_externo',
+        'fecha_devolucion',
+        'proyecto_nombre',
+        'dacion_acreedor',
+        'dacion_deuda_original',
     ];
 
     protected $casts = [
@@ -45,6 +56,11 @@ class Asset extends Model
         'fecha_inicio_depreciacion' => 'date',
         'valor_compra' => 'decimal:2',
         'valor_residual' => 'decimal:2',
+        'valor_estimado' => 'decimal:2',
+        'depreciacion_acumulada_transferencia' => 'decimal:2',
+        'dacion_deuda_original' => 'decimal:2',
+        'depreciable' => 'boolean',
+        'fecha_devolucion' => 'date',
         'aplicar_regla_dia_15' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -210,7 +226,7 @@ class Asset extends Model
     // Scopes
     public function scopeActivos($query)
     {
-        return $query->where('estado', 'activo');
+        return $query->whereIn('estado', ['activo', 'disponible', 'asignado', 'en_comodato', 'mantenimiento']);
     }
 
     public function scopeByLocation($query, $locationId)

@@ -8,6 +8,7 @@ use App\Modules\Assets\Models\AssetDepreciation;
 use App\Modules\Assets\Services\Depreciation\LinearDepreciation;
 use App\Modules\Assets\Services\Depreciation\AcceleratedDepreciation;
 use App\Modules\Assets\Services\Depreciation\UnitsOfProductionDepreciation;
+use App\Models\SystemSetting;
 
 class DepreciationCalculator
 {
@@ -45,6 +46,38 @@ class DepreciationCalculator
     }
 
     /**
+     * Resolver la vida útil de un activo usando:
+     * 1. El valor configurado en el activo
+     * 2. La tasa del tipo de bien en system_settings
+     * 3. La vida útil default del tipo de bien
+     * 4. 5 años como fallback
+     */
+    public function resolveVidaUtil(Asset $asset): int
+    {
+        // Si el activo tiene vida útil explícita, usarla
+        if ($asset->vida_util_anos && $asset->vida_util_anos > 0) {
+            return $asset->vida_util_anos;
+        }
+
+        // Intentar derivar de la tasa configurada en system_settings
+        if ($asset->tipoBien) {
+            $tasasPorTipo = SystemSetting::get('tasas_por_tipo', []);
+            $codigo = $asset->tipoBien->codigo;
+
+            if (isset($tasasPorTipo[$codigo]) && $tasasPorTipo[$codigo]['tasa'] > 0) {
+                return (int) round(100 / $tasasPorTipo[$codigo]['tasa']);
+            }
+
+            // Fallback a la vida útil default del tipo de bien
+            if ($asset->tipoBien->vida_util_default) {
+                return $asset->tipoBien->vida_util_default;
+            }
+        }
+
+        return 5; // fallback final
+    }
+
+    /**
      * Calcular depreciación para un activo
      */
     public function calculateForAsset(Asset $asset): array
@@ -52,7 +85,7 @@ class DepreciationCalculator
         // Resolver método automáticamente desde el activo
         $method = $this->resolveMethod($asset);
 
-        $vidaUtil = $asset->vida_util_anos ?? 5;
+        $vidaUtil = $this->resolveVidaUtil($asset);
         $valorCompra = $asset->valor_compra;
         $valorResidual = $asset->valor_residual ?? 0;
 

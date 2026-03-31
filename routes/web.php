@@ -122,6 +122,11 @@ Route::prefix('reports')->middleware(['auth', 'permission:reports.view'])->name(
     })->name('index');
 });
 
+// ==================== SETTINGS ====================
+Route::get('/settings', function () {
+    return Inertia::render('Settings/Index');
+})->middleware(['auth', 'permission:admin.manage_config'])->name('settings.index');
+
 // ==================== ADMIN (USERS & ROLES) ====================
 Route::prefix('admin')->middleware(['auth', 'permission:admin.manage_users'])->name('admin.')->group(function () {
     Route::resource('users', App\Http\Controllers\Admin\UserController::class);

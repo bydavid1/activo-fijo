@@ -27,11 +27,17 @@ export default function EditAsset({ user, asset: assetId }) {
     const [selectedType, setSelectedType] = useState(null);
 
     const estados = [
-        { label: 'Activo', value: 'activo' },
+        { label: 'Activo (legacy)', value: 'activo' },
+        { label: 'Disponible', value: 'disponible' },
+        { label: 'Asignado', value: 'asignado' },
+        { label: 'En Comodato', value: 'en_comodato' },
         { label: 'Mantenimiento', value: 'mantenimiento' },
-        { label: 'Inactivo', value: 'inactivo' },
-        { label: 'Descartado', value: 'descartado' },
-        { label: 'Retirado', value: 'retirado' },
+        { label: 'Baja', value: 'baja' },
+    ];
+
+    const tipoLeasingOptions = [
+        { label: 'Operativo', value: 'operativo' },
+        { label: 'Financiero', value: 'financiero' },
     ];
 
     const tiposAdquisicion = [
@@ -40,6 +46,8 @@ export default function EditAsset({ user, asset: assetId }) {
         { label: 'Transferencia', value: 'transferencia' },
         { label: 'Comodato', value: 'comodato' },
         { label: 'Leasing', value: 'leasing' },
+        { label: 'Dación en Pago', value: 'dacion_en_pago' },
+        { label: 'Proyecto', value: 'proyecto' },
     ];
 
     const metodosDepreciacion = [
@@ -49,6 +57,7 @@ export default function EditAsset({ user, asset: assetId }) {
     ];
 
     const periodicidades = [
+        { label: 'Diaria', value: 'diaria' },
         { label: 'Mensual', value: 'mensual' },
         { label: 'Anual', value: 'anual' },
     ];
@@ -72,12 +81,23 @@ export default function EditAsset({ user, asset: assetId }) {
         metodo_depreciacion: 'lineal',
         periodicidad_depreciacion: 'mensual',
         aplicar_regla_dia_15: true,
-        estado: 'activo',
+        estado: 'disponible',
         tipo_adquisicion: 'compra',
+        propiedad: 'propio',
+        depreciable: true,
+        tipo_leasing: null,
+        valor_estimado: null,
+        depreciacion_acumulada: null,
+        vida_util_restante: null,
+        responsable_externo: '',
+        fecha_devolucion: null,
         orden_compra: '',
         numero_factura: '',
         donante_nombre: '',
         donacion_documento: '',
+        proyecto_nombre: '',
+        dacion_acreedor: '',
+        dacion_deuda_original: null,
         custom_values: [],
     });
 
@@ -129,12 +149,23 @@ export default function EditAsset({ user, asset: assetId }) {
                 metodo_depreciacion: asset.metodo_depreciacion || 'lineal',
                 periodicidad_depreciacion: asset.periodicidad_depreciacion || 'mensual',
                 aplicar_regla_dia_15: asset.aplicar_regla_dia_15 ?? true,
-                estado: asset.estado || 'activo',
+                estado: asset.estado || 'disponible',
                 tipo_adquisicion: asset.tipo_adquisicion || 'compra',
+                propiedad: asset.propiedad || 'propio',
+                depreciable: asset.depreciable ?? true,
+                tipo_leasing: asset.tipo_leasing || null,
+                valor_estimado: asset.valor_estimado ?? null,
+                depreciacion_acumulada: asset.depreciacion_acumulada_transferencia ?? null,
+                vida_util_restante: asset.vida_util_restante ?? null,
+                responsable_externo: asset.responsable_externo || '',
+                fecha_devolucion: asset.fecha_devolucion ? new Date(asset.fecha_devolucion) : null,
                 orden_compra: asset.orden_compra || '',
                 numero_factura: asset.numero_factura || '',
                 donante_nombre: asset.donante_nombre || '',
                 donacion_documento: asset.donacion_documento || '',
+                proyecto_nombre: asset.proyecto_nombre || '',
+                dacion_acreedor: asset.dacion_acreedor || '',
+                dacion_deuda_original: asset.dacion_deuda_original ?? null,
                 custom_values: asset.custom_values?.map(cv => ({
                     property_id: cv.asset_type_property_id || cv.property_id,
                     valor: cv.valor || '',
@@ -167,6 +198,39 @@ export default function EditAsset({ user, asset: assetId }) {
         }
     }, [assetTypes, formData.asset_type_id]);
 
+    useEffect(() => {
+        const tipo = formData.tipo_adquisicion;
+        const tipoLeasing = formData.tipo_leasing;
+        const updates = {};
+
+        if (['compra', 'donacion', 'dacion_en_pago', 'proyecto'].includes(tipo)) {
+            updates.propiedad = 'propio';
+        }
+
+        if (tipo === 'comodato') {
+            updates.propiedad = 'tercero';
+            updates.depreciable = false;
+        }
+
+        if (tipo === 'donacion') {
+            updates.depreciable = true;
+        }
+
+        if (tipo === 'leasing' && tipoLeasing === 'operativo') {
+            updates.propiedad = 'tercero';
+            updates.depreciable = false;
+        }
+
+        if (tipo === 'leasing' && tipoLeasing === 'financiero') {
+            updates.propiedad = 'propio';
+            updates.depreciable = true;
+        }
+
+        if (Object.keys(updates).length > 0) {
+            setFormData(prev => ({ ...prev, ...updates }));
+        }
+    }, [formData.tipo_adquisicion, formData.tipo_leasing]);
+
     const handleTypeChange = (typeId) => {
         const type = assetTypes.find(t => t.id === typeId);
         setSelectedType(type);
@@ -193,6 +257,9 @@ export default function EditAsset({ user, asset: assetId }) {
             if (data.fecha_adquisicion instanceof Date) {
                 data.fecha_adquisicion = data.fecha_adquisicion.toISOString().split('T')[0];
             }
+            if (data.fecha_devolucion instanceof Date) {
+                data.fecha_devolucion = data.fecha_devolucion.toISOString().split('T')[0];
+            }
 
             // Remove empty/null values
             Object.keys(data).forEach(key => {
@@ -210,10 +277,15 @@ export default function EditAsset({ user, asset: assetId }) {
             });
             setTimeout(() => router.visit(`/assets/${assetId}`), 1500);
         } catch (error) {
+            const backendErrors = error.response?.data?.errors;
+            const firstRuleError = backendErrors
+                ? Object.values(backendErrors).flat().find(Boolean)
+                : null;
+
             toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
-                detail: error.response?.data?.message || error.response?.data?.error || 'Error al actualizar el activo',
+                detail: firstRuleError || error.response?.data?.message || error.response?.data?.error || 'Error al actualizar el activo',
             });
         } finally {
             setLoading(false);
@@ -238,6 +310,12 @@ export default function EditAsset({ user, asset: assetId }) {
     };
 
     const esDonacion = formData.tipo_adquisicion === 'donacion';
+    const esDacion = formData.tipo_adquisicion === 'dacion_en_pago';
+    const esProyecto = formData.tipo_adquisicion === 'proyecto';
+    const esComodatoAdquisicion = formData.tipo_adquisicion === 'comodato';
+    const esLeasing = formData.tipo_adquisicion === 'leasing';
+    const esTransferencia = formData.tipo_adquisicion === 'transferencia';
+    const ocultarPropiedad = ['compra', 'donacion', 'dacion_en_pago', 'proyecto', 'comodato'].includes(formData.tipo_adquisicion);
 
     if (loadingAsset) {
         return (
@@ -495,7 +573,41 @@ export default function EditAsset({ user, asset: assetId }) {
                             />
                         </div>
 
-                        {!esDonacion && (
+                        {!ocultarPropiedad && (
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Propiedad</label>
+                                <Dropdown
+                                    value={formData.propiedad}
+                                    options={[{ label: 'Propio', value: 'propio' }, { label: 'Tercero', value: 'tercero' }]}
+                                    onChange={(e) => setFormData({ ...formData, propiedad: e.value, depreciable: e.value === 'tercero' ? false : formData.depreciable })}
+                                    className="w-full"
+                                    disabled={esLeasing && !!formData.tipo_leasing}
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-3">
+                            <InputSwitch
+                                checked={!!formData.depreciable}
+                                onChange={(e) => setFormData({ ...formData, depreciable: e.value })}
+                                disabled={formData.propiedad === 'tercero' || esComodatoAdquisicion || (esLeasing && !!formData.tipo_leasing)}
+                            />
+                            <label className="text-sm">Depreciable</label>
+                        </div>
+
+                        {esLeasing && (
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Tipo de Leasing *</label>
+                                <Dropdown
+                                    value={formData.tipo_leasing}
+                                    options={tipoLeasingOptions}
+                                    onChange={(e) => setFormData({ ...formData, tipo_leasing: e.value })}
+                                    className="w-full"
+                                />
+                            </div>
+                        )}
+
+                        {!esDonacion && !esDacion && !esProyecto && (
                             <>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Proveedor</label>
@@ -534,6 +646,17 @@ export default function EditAsset({ user, asset: assetId }) {
                         {esDonacion && (
                             <>
                                 <div>
+                                    <label className="block text-sm font-medium mb-2">Valor Estimado *</label>
+                                    <InputNumber
+                                        value={formData.valor_estimado}
+                                        onChange={(e) => setFormData({ ...formData, valor_estimado: e.value })}
+                                        className="w-full"
+                                        mode="currency"
+                                        currency="USD"
+                                        locale="en-US"
+                                    />
+                                </div>
+                                <div>
                                     <label className="block text-sm font-medium mb-2">Nombre del Donante</label>
                                     <InputText
                                         name="donante_nombre"
@@ -553,6 +676,95 @@ export default function EditAsset({ user, asset: assetId }) {
                                 </div>
                             </>
                         )}
+
+                        {esDacion && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Acreedor *</label>
+                                    <InputText
+                                        name="dacion_acreedor"
+                                        value={formData.dacion_acreedor}
+                                        onChange={handleInputChange}
+                                        className="w-full"
+                                        placeholder="Nombre del acreedor"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Deuda Original</label>
+                                    <InputNumber
+                                        value={formData.dacion_deuda_original}
+                                        onChange={(e) => setFormData({ ...formData, dacion_deuda_original: e.value })}
+                                        className="w-full"
+                                        mode="currency"
+                                        currency="USD"
+                                        locale="en-US"
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {esProyecto && (
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Nombre del Proyecto *</label>
+                                <InputText
+                                    name="proyecto_nombre"
+                                    value={formData.proyecto_nombre}
+                                    onChange={handleInputChange}
+                                    className="w-full"
+                                    placeholder="Ej: Proyecto de modernización tecnológica"
+                                />
+                            </div>
+                        )}
+
+                        {esTransferencia && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Depreciación Acumulada</label>
+                                    <InputNumber
+                                        value={formData.depreciacion_acumulada}
+                                        onChange={(e) => setFormData({ ...formData, depreciacion_acumulada: e.value })}
+                                        className="w-full"
+                                        mode="currency"
+                                        currency="USD"
+                                        locale="en-US"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Vida Útil Restante (años)</label>
+                                    <InputNumber
+                                        value={formData.vida_util_restante}
+                                        onChange={(e) => setFormData({ ...formData, vida_util_restante: e.value })}
+                                        className="w-full"
+                                        min={0}
+                                        max={100}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {esComodatoAdquisicion && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Responsable Externo *</label>
+                                    <InputText
+                                        name="responsable_externo"
+                                        value={formData.responsable_externo}
+                                        onChange={handleInputChange}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Fecha de Devolución *</label>
+                                    <Calendar
+                                        value={formData.fecha_devolucion}
+                                        onChange={(e) => setFormData({ ...formData, fecha_devolucion: e.value })}
+                                        className="w-full"
+                                        dateFormat="yy-mm-dd"
+                                        minDate={new Date()}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* ═══════════════ VALORES Y DEPRECIACIÓN ═══════════════ */}
@@ -568,6 +780,9 @@ export default function EditAsset({ user, asset: assetId }) {
                             Los cambios aplicarán a partir del próximo cálculo.
                         </p>
                     </div>
+                    {!formData.depreciable && (
+                        <Tag severity="info" value="Activo no depreciable por regla de negocio" className="mb-4" />
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-2">Valor de Compra</label>
@@ -601,6 +816,7 @@ export default function EditAsset({ user, asset: assetId }) {
                                 className="w-full"
                                 min={1}
                                 max={100}
+                                disabled={!formData.depreciable}
                             />
                         </div>
                         <div>
@@ -610,6 +826,7 @@ export default function EditAsset({ user, asset: assetId }) {
                                 options={metodosDepreciacion}
                                 onChange={(e) => setFormData({ ...formData, metodo_depreciacion: e.value })}
                                 className="w-full"
+                                disabled={!formData.depreciable}
                             />
                         </div>
                         <div>
@@ -619,12 +836,14 @@ export default function EditAsset({ user, asset: assetId }) {
                                 options={periodicidades}
                                 onChange={(e) => setFormData({ ...formData, periodicidad_depreciacion: e.value })}
                                 className="w-full"
+                                disabled={!formData.depreciable}
                             />
                         </div>
                         <div className="flex items-center gap-3">
                             <InputSwitch
                                 checked={formData.aplicar_regla_dia_15}
                                 onChange={(e) => setFormData({ ...formData, aplicar_regla_dia_15: e.value })}
+                                disabled={!formData.depreciable}
                             />
                             <label className="text-sm">
                                 Aplicar regla del día 15

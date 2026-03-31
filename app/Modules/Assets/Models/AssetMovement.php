@@ -20,7 +20,14 @@ class AssetMovement extends Model
         'tipo',
         'motivo',
         'fecha_devolucion_esperada',
+        'responsable_externo',
+        'empresa_externa',
+        'fecha_devolucion',
         'usuario_id',
+        // Campos de baja
+        'motivo_baja',
+        'fecha_baja',
+        'ganancia_perdida',
         // Campos de venta
         'tipo_venta',
         'tipo_pago',
@@ -34,7 +41,10 @@ class AssetMovement extends Model
 
     protected $casts = [
         'fecha_devolucion_esperada' => 'date',
+        'fecha_devolucion' => 'date',
+        'fecha_baja' => 'date',
         'precio_venta' => 'decimal:2',
+        'ganancia_perdida' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -42,11 +52,21 @@ class AssetMovement extends Model
 
     // Constantes para tipos de movimiento
     const TIPO_TRASLADO = 'traslado';
+    const TIPO_ASIGNACION = 'asignacion';
     const TIPO_REUBICACION = 'reubicacion';
     const TIPO_MANTENIMIENTO = 'mantenimiento';
+    const TIPO_PRESTAMO = 'prestamo';
+    const TIPO_DEVOLUCION = 'devolucion';
+    const TIPO_COMODATO = 'comodato';
     const TIPO_VENTA = 'venta';
     const TIPO_BAJA = 'baja';
     const TIPO_OTRO = 'otro';
+
+    // Constantes para motivos de baja
+    const MOTIVO_PERDIDA = 'perdida';
+    const MOTIVO_OBSOLESCENCIA = 'obsolescencia';
+    const MOTIVO_ROBO = 'robo';
+    const MOTIVO_OTRO = 'otro';
 
     // Constantes para tipos de venta
     const VENTA_DIRECTA = 'directa';

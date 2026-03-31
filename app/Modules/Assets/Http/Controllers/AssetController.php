@@ -12,6 +12,8 @@ use App\Modules\Assets\Models\AssetValuation;
 use App\Modules\Assets\Models\AssetType;
 use App\Modules\Assets\Models\AssetCustomValue;
 use App\Modules\Assets\Models\AssetAttachment;
+use App\Modules\Assets\Services\AssetCreationBusinessRules;
+use App\Modules\Assets\Services\AssetMovementBusinessRules;
 use App\Modules\Assets\Services\DepreciationCalculator;
 use App\Modules\Assets\Services\QRCodeGenerator;
 use App\Modules\Assets\Events\AssetCreated;
@@ -20,22 +22,30 @@ use App\Modules\Assets\Events\AssetDisposed;
 use App\Modules\Assets\Events\AssetRevalued;
 use App\Modules\Employees\Models\Employee;
 use App\Modules\Suppliers\Models\Supplier;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AssetController extends Controller
 {
     private QRCodeGenerator $qrGenerator;
     private DepreciationCalculator $depreciationCalculator;
+    private AssetCreationBusinessRules $assetCreationBusinessRules;
+    private AssetMovementBusinessRules $assetMovementBusinessRules;
 
     public function __construct(
         QRCodeGenerator $qrGenerator,
-        DepreciationCalculator $depreciationCalculator
+        DepreciationCalculator $depreciationCalculator,
+        AssetCreationBusinessRules $assetCreationBusinessRules,
+        AssetMovementBusinessRules $assetMovementBusinessRules
     ) {
         $this->qrGenerator = $qrGenerator;
         $this->depreciationCalculator = $depreciationCalculator;
+        $this->assetCreationBusinessRules = $assetCreationBusinessRules;
+        $this->assetMovementBusinessRules = $assetMovementBusinessRules;
     }
 
     /**
@@ -123,7 +133,7 @@ class AssetController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'codigo' => 'required|unique:assets,codigo',
             'nombre' => 'required|string',
             'descripcion' => 'nullable|string',
@@ -139,23 +149,64 @@ class AssetController extends Controller
             'vida_util_anos' => 'nullable|integer|min:1',
             'fecha_adquisicion' => 'required|date',
             'metodo_depreciacion' => 'nullable|string|in:lineal,acelerada,unidades_producidas',
-            'periodicidad_depreciacion' => 'nullable|string|in:mensual,anual',
+            'periodicidad_depreciacion' => 'nullable|string|in:diaria,mensual,anual',
             'aplicar_regla_dia_15' => 'nullable|boolean',
             'asset_type_id' => 'nullable|exists:asset_types,id',
             'custom_values' => 'nullable|array',
             'custom_values.*.property_id' => 'required_with:custom_values|exists:asset_type_properties,id',
             'custom_values.*.valor' => 'nullable|string',
             // Nuevos campos de adquisición
-            'tipo_adquisicion' => 'nullable|string|in:compra,donacion,transferencia,comodato,leasing',
+            'tipo_adquisicion' => 'nullable|string|in:compra,donacion,transferencia,comodato,leasing,dacion_en_pago,proyecto',
+            'propiedad' => 'nullable|string|in:propio,tercero',
+            'depreciable' => 'nullable|boolean',
+            'tipo_leasing' => 'nullable|string|in:operativo,financiero',
+            'valor_estimado' => 'nullable|numeric|min:0',
+            'depreciacion_acumulada_transferencia' => 'nullable|numeric|min:0',
+            'vida_util_restante' => 'nullable|integer|min:0',
+            'responsable_externo' => 'nullable|string|max:255',
+            'fecha_devolucion' => 'nullable|date|after_or_equal:today',
+            'estado' => 'nullable|string|in:activo,disponible,asignado,en_comodato,mantenimiento,baja,inactivo,descartado,retirado,vendido',
             'orden_compra' => 'nullable|string|max:100',
             'numero_factura' => 'nullable|string|max:100',
             'donante_nombre' => 'nullable|string|max:255',
             'donacion_documento' => 'nullable|string',
+            'proyecto_nombre' => 'nullable|required_if:tipo_adquisicion,proyecto|string|max:255',
+            'dacion_acreedor' => 'nullable|required_if:tipo_adquisicion,dacion_en_pago|string|max:255',
+            'dacion_deuda_original' => 'nullable|numeric|min:0',
+            'depreciacion_acumulada' => 'nullable|numeric|min:0',
             // Archivos adjuntos
             'foto' => 'nullable|image|max:5120', // 5MB max
             'documentos' => 'nullable|array',
             'documentos.*' => 'file|max:10240', // 10MB max cada uno
+        ], [
+            'tipo_leasing.in' => 'El tipo de leasing debe ser operativo o financiero.',
+            'fecha_devolucion.after_or_equal' => 'La fecha de devolucion debe ser hoy o una fecha futura.',
+            'tipo_adquisicion.in' => 'El tipo de adquisicion no es valido.',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validacion al crear activo.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        // Alias para compatibilidad con el requerimiento de transferencia
+        if (array_key_exists('depreciacion_acumulada', $validated) && !array_key_exists('depreciacion_acumulada_transferencia', $validated)) {
+            $validated['depreciacion_acumulada_transferencia'] = $validated['depreciacion_acumulada'];
+        }
+
+        $rulesResult = $this->assetCreationBusinessRules->applyAndValidate($validated);
+        if (!empty($rulesResult['errors'])) {
+            return response()->json([
+                'message' => 'No se puede crear el activo por reglas de negocio.',
+                'errors' => $rulesResult['errors'],
+            ], 422);
+        }
+
+        $validated = $rulesResult['data'];
 
         try {
             // Si se eligió un tipo de bien, aplicar defaults
@@ -176,6 +227,12 @@ class AssetController extends Controller
             if (empty($validated['metodo_depreciacion'])) {
                 $categoria = AssetCategory::find($validated['categoria_id']);
                 $validated['metodo_depreciacion'] = $categoria->metodo_depreciacion ?? 'lineal';
+            }
+
+            // Auto-calcular valor residual usando configuración global si no se proporcionó
+            if (empty($validated['valor_residual']) && !empty($validated['valor_compra'])) {
+                $porcentaje = SystemSetting::get('valor_residual_porcentaje', 10);
+                $validated['valor_residual'] = round($validated['valor_compra'] * ($porcentaje / 100), 2);
             }
 
             // Extraer custom_values y archivos antes de crear
@@ -209,8 +266,8 @@ class AssetController extends Controller
                 $this->guardarArchivo($asset, $documento, 'otro', false);
             }
 
-            // Calcular depreciación (solo si es depreciable)
-            $esDep = $asset->tipoBien?->es_depreciable ?? true;
+            // Calcular depreciación solo cuando la regla de negocio lo permite
+            $esDep = (bool)($asset->depreciable ?? true);
             if ($esDep) {
                 $this->depreciationCalculator->saveDepreciation($asset);
             }
@@ -229,7 +286,7 @@ class AssetController extends Controller
      */
     public function update(Request $request, Asset $asset)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'nombre' => 'nullable|string',
             'descripcion' => 'nullable|string',
             'marca' => 'nullable|string',
@@ -239,15 +296,52 @@ class AssetController extends Controller
             'ubicacion_id' => 'nullable|exists:asset_locations,id',
             'proveedor_id' => 'nullable|exists:suppliers,id',
             'responsable_id' => 'nullable|exists:employees,id',
-            'estado' => 'nullable|in:activo,mantenimiento,inactivo,descartado,retirado',
+            'estado' => 'nullable|in:activo,disponible,asignado,en_comodato,mantenimiento,baja,inactivo,descartado,retirado,vendido',
+            'tipo_adquisicion' => 'nullable|string|in:compra,donacion,transferencia,comodato,leasing,dacion_en_pago,proyecto',
+            'propiedad' => 'nullable|string|in:propio,tercero',
+            'depreciable' => 'nullable|boolean',
+            'tipo_leasing' => 'nullable|string|in:operativo,financiero',
+            'valor_estimado' => 'nullable|numeric|min:0',
+            'depreciacion_acumulada_transferencia' => 'nullable|numeric|min:0',
+            'vida_util_restante' => 'nullable|integer|min:0',
+            'responsable_externo' => 'nullable|string|max:255',
+            'fecha_devolucion' => 'nullable|date|after_or_equal:today',
+            'proyecto_nombre' => 'nullable|string|max:255',
+            'dacion_acreedor' => 'nullable|string|max:255',
+            'dacion_deuda_original' => 'nullable|numeric|min:0',
             'valor_residual' => 'nullable|numeric|min:0',
             'vida_util_anos' => 'nullable|integer|min:1',
             'metodo_depreciacion' => 'nullable|string|in:lineal,acelerada,unidades_producidas',
             'asset_type_id' => 'nullable|exists:asset_types,id',
+            'depreciacion_acumulada' => 'nullable|numeric|min:0',
             'custom_values' => 'nullable|array',
             'custom_values.*.property_id' => 'required_with:custom_values|exists:asset_type_properties,id',
             'custom_values.*.valor' => 'nullable|string',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validacion al actualizar activo.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        if (array_key_exists('depreciacion_acumulada', $validated) && !array_key_exists('depreciacion_acumulada_transferencia', $validated)) {
+            $validated['depreciacion_acumulada_transferencia'] = $validated['depreciacion_acumulada'];
+        }
+
+        $candidate = array_merge($asset->toArray(), $validated);
+        $rulesResult = $this->assetCreationBusinessRules->applyAndValidate($candidate);
+        if (!empty($rulesResult['errors'])) {
+            return response()->json([
+                'message' => 'No se puede actualizar el activo por reglas de negocio.',
+                'errors' => $rulesResult['errors'],
+            ], 422);
+        }
+
+        $validated = array_intersect_key($rulesResult['data'], array_flip(array_keys($validated)));
 
         try {
             // Extraer custom_values antes de actualizar
@@ -382,33 +476,35 @@ class AssetController extends Controller
      */
     public function recordMovement(Request $request, Asset $asset)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'ubicacion_nueva_id' => 'required|exists:asset_locations,id',
             'responsable_nuevo_id' => 'nullable|exists:employees,id',
-            'tipo' => 'required|in:traslado,reubicacion,mantenimiento,prestamo,devolucion,baja,otro',
+            'tipo' => 'required|in:asignacion,traslado,comodato,devolucion,baja,reubicacion,mantenimiento,prestamo,otro',
             'motivo' => 'nullable|string',
             'fecha_devolucion_esperada' => 'nullable|date|after:today',
+            'responsable_externo' => 'nullable|string|max:255',
+            'empresa_externa' => 'nullable|string|max:255',
+            'fecha_devolucion' => 'nullable|date|after_or_equal:today',
+        ], [
+            'tipo.in' => 'El tipo de movimiento no es valido.',
+            'fecha_devolucion.after_or_equal' => 'La fecha_devolucion debe ser hoy o una fecha futura.',
         ]);
 
-        // Validación condicional para préstamos
-        if ($validated['tipo'] === 'prestamo' && empty($validated['fecha_devolucion_esperada'])) {
-            return response()->json(['error' => 'La fecha de devolución esperada es requerida para préstamos'], 422);
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validacion al registrar movimiento.',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        // Validación para devoluciones: debe existir un préstamo activo
-        if ($validated['tipo'] === 'devolucion') {
-            $prestamoPendiente = $asset->movimientos()
-                ->where('tipo', 'prestamo')
-                ->whereDoesntHave('asset.movimientos', function ($q) use ($asset) {
-                    $q->where('tipo', 'devolucion')
-                      ->where('asset_id', $asset->id);
-                })
-                ->latest()
-                ->first();
+        $validated = $validator->validated();
 
-            if (!$prestamoPendiente) {
-                return response()->json(['error' => 'No existe un préstamo activo para este activo'], 422);
-            }
+        $businessErrors = $this->assetMovementBusinessRules->validate($asset, $validated);
+        if (!empty($businessErrors)) {
+            return response()->json([
+                'message' => 'No se puede registrar el movimiento por reglas de negocio.',
+                'errors' => $businessErrors,
+            ], 422);
         }
 
         try {
@@ -423,6 +519,7 @@ class AssetController extends Controller
             $asset->update([
                 'ubicacion_id' => $validated['ubicacion_nueva_id'],
                 'responsable_id' => $validated['responsable_nuevo_id'] ?? $asset->responsable_id,
+                'estado' => $this->assetMovementBusinessRules->nextState($asset, $validated),
             ]);
 
             // Disparar evento
@@ -440,7 +537,9 @@ class AssetController extends Controller
     public function getOptions()
     {
         return response()->json([
-            'activos' => Asset::where('estado', 'activo')->select('id', 'codigo', 'nombre')->get(),
+            'activos' => Asset::whereIn('estado', ['activo', 'disponible', 'asignado', 'en_comodato', 'mantenimiento'])
+                ->select('id', 'codigo', 'nombre')
+                ->get(),
             'tipos_bien' => AssetType::with('properties')->get(),
             'categorias' => AssetCategory::select('id', 'nombre', 'metodo_depreciacion')->get(),
             'ubicaciones' => AssetLocation::select('id', 'nombre', 'codigo')->get(),
@@ -452,19 +551,32 @@ class AssetController extends Controller
                 'unidades_producidas' => 'Unidades Producidas',
             ],
             'estados' => [
-                'activo' => 'Activo',
+                'disponible' => 'Disponible',
+                'asignado' => 'Asignado',
+                'en_comodato' => 'En Comodato',
                 'mantenimiento' => 'En Mantenimiento',
-                'inactivo' => 'Inactivo',
-                'descartado' => 'Descartado',
-                'retirado' => 'Retirado',
+                'baja' => 'Baja',
             ],
             'tipos_movimiento' => [
+                'asignacion' => 'Asignación',
                 'traslado' => 'Traslado',
-                'reubicacion' => 'Reubicación',
-                'mantenimiento' => 'Mantenimiento',
-                'prestamo' => 'Préstamo',
+                'comodato' => 'Comodato',
                 'devolucion' => 'Devolución',
                 'baja' => 'Baja',
+            ],
+            'tipos_adquisicion' => [
+                'compra' => 'Compra',
+                'donacion' => 'Donación',
+                'transferencia' => 'Transferencia',
+                'comodato' => 'Comodato',
+                'leasing' => 'Leasing',
+                'dacion_en_pago' => 'Dación en Pago',
+                'proyecto' => 'Proyecto',
+            ],
+            'motivos_baja' => [
+                'perdida' => 'Pérdida',
+                'obsolescencia' => 'Obsolescencia',
+                'robo' => 'Robo',
                 'otro' => 'Otro',
             ],
         ]);
@@ -477,6 +589,7 @@ class AssetController extends Controller
     {
         $validated = $request->validate([
             'motivo' => 'required|string',
+            'motivo_baja' => 'required|string|in:perdida,obsolescencia,robo,otro',
             'valor_venta' => 'nullable|numeric|min:0',
             'fecha_baja' => 'required|date',
         ]);
@@ -492,9 +605,9 @@ class AssetController extends Controller
             $gananciaPerdida = $valorVenta - $valorEnLibros;
 
             // Cambiar estado
-            $asset->update(['estado' => 'retirado']);
+            $asset->update(['estado' => 'baja']);
 
-            // Registrar movimiento de baja
+            // Registrar movimiento de baja con motivo categorizado
             $movement = $asset->movimientos()->create([
                 'ubicacion_anterior_id' => $asset->ubicacion_id,
                 'ubicacion_nueva_id' => $asset->ubicacion_id,
@@ -502,6 +615,9 @@ class AssetController extends Controller
                 'responsable_nuevo_id' => null,
                 'tipo' => 'baja',
                 'motivo' => $validated['motivo'],
+                'motivo_baja' => $validated['motivo_baja'],
+                'fecha_baja' => $validated['fecha_baja'],
+                'ganancia_perdida' => $gananciaPerdida,
                 'usuario_id' => auth()->id(),
             ]);
 
@@ -697,8 +813,8 @@ class AssetController extends Controller
             'documento_venta' => 'nullable|file|max:10240',
         ]);
 
-        if ($asset->estado === 'vendido') {
-            return response()->json(['error' => 'Este activo ya fue vendido'], 422);
+        if (in_array($asset->estado, ['vendido', 'baja'], true)) {
+            return response()->json(['error' => 'No se puede registrar venta para activos en estado vendido o baja'], 422);
         }
 
         try {
@@ -735,7 +851,7 @@ class AssetController extends Controller
             ]);
 
             // Disparar evento
-            AssetDisposed::dispatch($asset, 'venta');
+            AssetDisposed::dispatch($asset, $asset->valor_en_libros);
 
             return response()->json([
                 'mensaje' => 'Activo vendido exitosamente',

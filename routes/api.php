@@ -12,6 +12,7 @@ use App\Modules\Inventory\Http\Controllers\InventoryController;
 use App\Modules\Inventory\Http\Controllers\InventoryAuditController;
 use App\Modules\Maintenance\Http\Controllers\MaintenanceController;
 use App\Modules\Reports\Http\Controllers\ReportController;
+use App\Http\Controllers\SystemSettingsController;
 
 // Test endpoint (sin autenticación)
 Route::get('/test', function () {
@@ -27,6 +28,12 @@ Route::get('/test', function () {
 Route::middleware('auth:web')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
+    });
+
+    // ==================== SETTINGS ====================
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', [SystemSettingsController::class, 'index'])->name('index');
+        Route::put('/', [SystemSettingsController::class, 'update'])->name('update');
     });
 
     // ==================== ASSETS ====================

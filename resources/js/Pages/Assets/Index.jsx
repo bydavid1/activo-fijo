@@ -43,6 +43,7 @@ const Assets = () => {
     const [disposeAsset, setDisposeAsset] = useState(null);
     const [disposeData, setDisposeData] = useState({
         motivo: '',
+        motivo_baja: null,
         valor_venta: 0,
         fecha_baja: new Date(),
     });
@@ -277,7 +278,7 @@ const Assets = () => {
     // Dispose
     const handleOpenDispose = (asset) => {
         setDisposeAsset(asset);
-        setDisposeData({ motivo: '', valor_venta: 0, fecha_baja: new Date() });
+        setDisposeData({ motivo: '', motivo_baja: null, valor_venta: 0, fecha_baja: new Date() });
         setDisplayDisposeDialog(true);
     };
 
@@ -1045,12 +1046,27 @@ const Assets = () => {
             >
                 <div className="grid grid-cols-1 gap-4">
                     <div>
-                        <label className="block text-sm font-semibold mb-2">Motivo de Baja</label>
+                        <label className="block text-sm font-semibold mb-2">Motivo de Baja *</label>
+                        <Dropdown
+                            value={disposeData.motivo_baja}
+                            options={[
+                                { label: 'Pérdida', value: 'perdida' },
+                                { label: 'Obsolescencia', value: 'obsolescencia' },
+                                { label: 'Robo', value: 'robo' },
+                                { label: 'Otro', value: 'otro' },
+                            ]}
+                            onChange={(e) => setDisposeData({ ...disposeData, motivo_baja: e.value })}
+                            placeholder="Seleccione el motivo"
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Observaciones *</label>
                         <InputText
                             value={disposeData.motivo}
                             onChange={(e) => setDisposeData({ ...disposeData, motivo: e.target.value })}
                             className="w-full p-2 border border-gray-300 rounded"
-                            placeholder="Ej: Obsolescencia, daño irreparable..."
+                            placeholder="Detalle adicional sobre la baja..."
                         />
                     </div>
                     <div>
@@ -1059,8 +1075,8 @@ const Assets = () => {
                             value={disposeData.valor_venta}
                             onValueChange={(e) => setDisposeData({ ...disposeData, valor_venta: e.value })}
                             mode="currency"
-                            currency="COP"
-                            locale="es-CO"
+                            currency="USD"
+                            locale="en-US"
                             className="w-full"
                         />
                     </div>
@@ -1081,6 +1097,7 @@ const Assets = () => {
                         icon="pi pi-ban"
                         onClick={handleDispose}
                         className="p-button-danger"
+                        disabled={!disposeData.motivo_baja || !disposeData.motivo}
                     />
                     <Button
                         label="Cancelar"

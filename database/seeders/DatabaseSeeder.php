@@ -24,6 +24,9 @@ class DatabaseSeeder extends Seeder
 
         // Seeders del sistema de activo fijo
         $this->call([
+            // Configuración global del sistema
+            SystemSettingsSeeder::class,
+
             // Datos base (requeridos para otros seeders)
             AssetCategorySeeder::class,
             AssetLocationSeeder::class,
