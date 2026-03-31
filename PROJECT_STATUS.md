@@ -67,96 +67,96 @@
 - [ ] Archivo de configuración `config/app-config.php`
 
 #### Fase 2: API Endpoints y Controladores
-- [ ] **Assets Controller**: CRUD para activos
-  - [ ] GET `/api/assets` - Listar activos
-  - [ ] GET `/api/assets/{id}` - Ver detalles
-  - [ ] GET `/api/assets/{id}/qr` - Descargar QR PNG
-  - [ ] POST `/api/assets` - Crear activo
-  - [ ] PUT `/api/assets/{id}` - Actualizar activo
-  - [ ] DELETE `/api/assets/{id}` - Eliminar activo
-  - [ ] POST `/api/assets/{id}/movements` - Registrar movimiento
+- [x] **Assets Controller**: CRUD para activos
+  - [x] GET `/api/assets` - Listar activos
+  - [x] GET `/api/assets/{id}` - Ver detalles
+  - [x] GET `/api/assets/{id}/qr` - Descargar QR PNG
+  - [x] POST `/api/assets` - Crear activo
+  - [x] PUT `/api/assets/{id}` - Actualizar activo
+  - [x] DELETE `/api/assets/{id}` - Eliminar activo
+  - [x] POST `/api/assets/{id}/movements` - Registrar movimiento
   
-- [ ] **Employees Controller**: CRUD + Sincronización
-  - [ ] GET `/api/employees` - Listar empleados
-  - [ ] POST `/api/employees` - Crear empleado (solo si es local)
-  - [ ] POST `/api/employees/sync` - Sincronizar desde API externa
+- [x] **Employees Controller**: CRUD + Sincronización
+  - [x] GET `/api/employees` - Listar empleados
+  - [x] POST `/api/employees` - Crear empleado (solo si es local)
+  - [x] POST `/api/employees/sync` - Sincronizar desde API externa
   
-- [ ] **Inventory Controller**: Ciclos y discrepancias
-  - [ ] GET `/api/inventory-cycles` - Listar ciclos
-  - [ ] POST `/api/inventory-cycles` - Crear ciclo
-  - [ ] POST `/api/inventory-cycles/{id}/capture` - Capturar activo
-  - [ ] GET `/api/inventory-cycles/{id}/discrepancies` - Listar discrepancias
-  - [ ] PUT `/api/inventory-discrepancies/{id}/approve` - Aprobar discrepancia
-  - [ ] PUT `/api/inventory-discrepancies/{id}/reject` - Rechazar discrepancia
+- [x] **Inventory Controller**: Ciclos y discrepancias
+  - [x] GET `/api/inventory-cycles` - Listar ciclos
+  - [x] POST `/api/inventory-cycles` - Crear ciclo
+  - [x] POST `/api/inventory-cycles/{id}/capture` - Capturar activo
+  - [x] GET `/api/inventory-cycles/{id}/discrepancies` - Listar discrepancias
+  - [x] PUT `/api/inventory-discrepancies/{id}/approve` - Aprobar discrepancia
+  - [x] PUT `/api/inventory-discrepancies/{id}/reject` - Rechazar discrepancia
 
-- [ ] **Maintenance Controller**: Órdenes de mantenimiento
-  - [ ] GET `/api/maintenance-orders` - Listar
-  - [ ] POST `/api/maintenance-orders` - Crear
-  - [ ] PUT `/api/maintenance-orders/{id}` - Actualizar estado
+- [x] **Maintenance Controller**: Órdenes de mantenimiento
+  - [x] GET `/api/maintenance-orders` - Listar
+  - [x] POST `/api/maintenance-orders` - Crear
+  - [x] PUT `/api/maintenance-orders/{id}` - Actualizar estado
 
-- [ ] **Reports Controller**: Reportes y exportación
-  - [ ] GET `/api/reports/asset-list` - Reporte de activos
-  - [ ] GET `/api/reports/depreciation` - Reporte de depreciación
-  - [ ] GET `/api/reports/book-value` - Valor en libros
-  - [ ] GET `/api/reports/movements` - Movimientos
-  - [ ] GET `/api/reports/discrepancies` - Discrepancias
-  - [ ] GET `/api/reports/{type}/export?format=excel|pdf` - Exportar
+- [x] **Reports Controller**: Reportes y exportación
+  - [x] GET `/api/reports/asset-list` - Reporte de activos
+  - [x] GET `/api/reports/depreciation` - Reporte de depreciación
+  - [x] GET `/api/reports/book-value` - Valor en libros
+  - [x] GET `/api/reports/movements` - Movimientos
+  - [x] GET `/api/reports/discrepancies` - Discrepancias
+  - [x] GET `/api/reports/{type}/export?format=excel|pdf` - Exportar
 
 #### Fase 3: Componentes React y Frontend
-- [ ] **Layout Principal**
-  - [ ] Navbar con navegación
-  - [ ] Sidebar con menú de módulos
-  - [ ] Footer
+- [x] **Layout Principal**
+  - [x] Navbar con navegación
+  - [x] Sidebar con menú de módulos
+  - [x] Footer
 
-- [ ] **Dashboard**: Vista de resumen
-  - [ ] Tarjetas KPI (total activos, valor total, depreciación acumulada)
-  - [ ] Gráficos Recharts (depreciación acumulada, activos por categoría, tendencias)
-  - [ ] Últimas operaciones
+- [x] **Dashboard**: Vista de resumen
+  - [x] Tarjetas KPI (total activos, valor total, depreciación acumulada)
+  - [x] Gráficos Recharts (depreciación acumulada, activos por categoría, tendencias)
+  - [x] Últimas operaciones
 
-- [ ] **Módulo Assets**
-  - [ ] Página listado de activos (tabla filtrable, paginada)
-  - [ ] Formulario crear/editar activo
-  - [ ] Visor de QR (con descarga PNG)
-  - [ ] Historial de movimientos
+- [x] **Módulo Assets**
+  - [x] Página listado de activos (tabla filtrable, paginada)
+  - [x] Formulario crear/editar activo
+  - [x] Visor de QR (con descarga PNG)
+  - [x] Historial de movimientos
 
-- [ ] **Módulo Employees**
-  - [ ] Tabla de empleados
-  - [ ] Botón "Sincronizar Ahora" con loader
-  - [ ] Notificación de resultado de sincronización
-  - [ ] Formulario crear empleado (si es local)
+- [x] **Módulo Employees**
+  - [x] Tabla de empleados
+  - [x] Botón "Sincronizar Ahora" con loader
+  - [x] Notificación de resultado de sincronización
+  - [x] Formulario crear empleado (si es local)
 
-- [ ] **Módulo Inventory**
-  - [ ] Página ciclos de inventario
-  - [ ] Crear ciclo
-  - [ ] Scanner QR para capturar activos
-  - [ ] Tabla de capturas
-  - [ ] Listado de discrepancias con estado
-  - [ ] Panel de aprobación (Asset Manager)
-  - [ ] Historial de transiciones
+- [x] **Módulo Inventory**
+  - [x] Página ciclos de inventario
+  - [x] Crear ciclo
+  - [x] Scanner QR para capturar activos
+  - [x] Tabla de capturas
+  - [x] Listado de discrepancias con estado
+  - [x] Panel de aprobación (Asset Manager)
+  - [x] Historial de transiciones
 
-- [ ] **Módulo Maintenance**
-  - [ ] Tabla de órdenes de mantenimiento
-  - [ ] Crear orden
-  - [ ] Cambiar estado
-  - [ ] Historial de cambios
+- [x] **Módulo Maintenance**
+  - [x] Tabla de órdenes de mantenimiento
+  - [x] Crear orden
+  - [x] Cambiar estado
+  - [x] Historial de cambios
 
-- [ ] **Módulo Reports**
-  - [ ] Selector de tipo de reporte
-  - [ ] Filtros (rango de fechas, categoría, ubicación, responsable)
-  - [ ] Tabla de datos con paginación
-  - [ ] Gráficos incrustados (Recharts)
-  - [ ] Botones exportar (Excel, PDF)
+- [x] **Módulo Reports**
+  - [x] Selector de tipo de reporte
+  - [x] Filtros (rango de fechas, categoría, ubicación, responsable)
+  - [x] Tabla de datos con paginación
+  - [x] Gráficos incrustados (Recharts)
+  - [x] Botones exportar (Excel, PDF)
 
-- [ ] **Auditoría**
-  - [ ] Log de cambios (activity_log)
-  - [ ] Filtros por usuario, fecha, tipo de acción
+- [x] **Auditoría**
+  - [x] Log de cambios (activity_log)
+  - [x] Filtros por usuario, fecha, tipo de acción
 
 #### Fase 4: Servicios Avanzados
-- [ ] Servicio de valoración (AssetValuationService)
-- [ ] Servicio de movimientos (AssetMovementService)
-- [ ] Servicio de discrepancias y aprobación
-- [ ] Servicio de generación de reportes (QueryObjects, caching)
-- [ ] Exportadores (Excel, PDF)
+- [x] Servicio de valoración (AssetValuationService)
+- [x] Servicio de movimientos (AssetMovementService)
+- [x] Servicio de discrepancias y aprobación
+- [x] Servicio de generación de reportes (QueryObjects, caching)
+- [x] Exportadores (Excel, PDF)
 
 #### Fase 5: Integración de APIs Externas
 - [ ] Implementar adaptadores de ejemplo (SAP, Adobe, etc.)
