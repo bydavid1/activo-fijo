@@ -5,6 +5,8 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Modules\Accounting\Http\Controllers\AccountingAccountController;
+use App\Modules\Accounting\Http\Controllers\JournalEntryController;
 
 // ==================== AUTHENTICATION ====================
 Route::get('/login', [LoginController::class, 'showLoginForm'])->middleware('guest')->name('login');
@@ -120,6 +122,16 @@ Route::prefix('reports')->middleware(['auth', 'permission:reports.view'])->name(
     Route::get('/', function () {
         return Inertia::render('Reports/Index');
     })->name('index');
+});
+
+// ==================== ACCOUNTING ====================
+Route::prefix('accounting')->middleware(['auth'])->name('accounting.')->group(function () {
+    // Catálogo de Cuentas
+    Route::get('/accounts', [AccountingAccountController::class, 'index'])->name('accounts.index');
+    
+    // Asientos Contables
+    Route::get('/journal-entries', [JournalEntryController::class, 'index'])->name('journal-entries.index');
+    Route::get('/journal-entries/create', [JournalEntryController::class, 'create'])->name('journal-entries.create');
 });
 
 // ==================== SETTINGS ====================

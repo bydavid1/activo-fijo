@@ -9,9 +9,13 @@ use App\Modules\Assets\Events\AssetCreated;
 use App\Modules\Assets\Events\AssetMoved;
 use App\Modules\Assets\Events\AssetRevalued;
 use App\Modules\Assets\Events\AssetDisposed;
+use App\Modules\Assets\Events\AssetDepreciated;
 use App\Modules\Assets\Listeners\LogAssetCreated;
 use App\Modules\Assets\Listeners\LogAssetMoved;
 use App\Modules\Assets\Listeners\LogAssetRevalued;
+
+// Accounting Events
+use App\Modules\Accounting\Listeners\CreateDepreciationJournalEntry;
 
 // Inventory Events
 use App\Modules\Inventory\Events\DiscrepancyDetected;

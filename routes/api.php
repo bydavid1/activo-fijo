@@ -13,6 +13,8 @@ use App\Modules\Inventory\Http\Controllers\InventoryAuditController;
 use App\Modules\Maintenance\Http\Controllers\MaintenanceController;
 use App\Modules\Reports\Http\Controllers\ReportController;
 use App\Http\Controllers\SystemSettingsController;
+use App\Modules\Accounting\Http\Controllers\AccountingAccountController;
+use App\Modules\Accounting\Http\Controllers\JournalEntryController;
 
 // Test endpoint (sin autenticación)
 Route::get('/test', function () {
@@ -180,5 +182,20 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/inventory-audits', [ReportController::class, 'inventoryAudits'])->name('inventory-audits');
         Route::get('/summary', [ReportController::class, 'summary'])->name('summary');
         Route::post('/export', [ReportController::class, 'export'])->name('export');
+    });
+
+    // ==================== ACCOUNTING ====================
+    Route::prefix('accounting')->name('accounting.')->group(function () {
+        // Acceso al catálogo de cuentas (para selects e index via JSON)
+        Route::get('/accounts', [AccountingAccountController::class, 'apiIndex']);
+        Route::post('/accounts', [AccountingAccountController::class, 'store']);
+        Route::put('/accounts/{account}', [AccountingAccountController::class, 'update']);
+        
+        // Acceso a los asientos contables API
+        Route::get('/journal-entries', [JournalEntryController::class, 'apiIndex']);
+        Route::post('/journal-entries', [JournalEntryController::class, 'store']);
+        Route::post('/journal-entries/run-depreciation', [JournalEntryController::class, 'runMonthlyDepreciation']);
+        Route::get('/journal-entries/close-history', [JournalEntryController::class, 'closeHistory']);
+        Route::get('/journal-entries/{entry}', [JournalEntryController::class, 'apiShow']);
     });
 }); // Cierre del middleware auth:web

@@ -27,6 +27,7 @@ const dataTypeOptions = [
 
 const AssetTypes = ({ user }) => {
     const [types, setTypes] = useState([]);
+    const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef(null);
@@ -38,9 +39,11 @@ const AssetTypes = ({ user }) => {
         nombre: '',
         codigo: '',
         descripcion: '',
+        descripcion: '',
         es_depreciable: true,
         vida_util_default: null,
-        cuenta_contable: '',
+        cuenta_gasto_depreciacion_id: null,
+        cuenta_depreciacion_acumulada_id: null,
     });
 
     // Properties dialog
@@ -64,11 +67,18 @@ const AssetTypes = ({ user }) => {
 
     const fetchTypes = async () => {
         try {
-            const response = await axios.get('/api/asset-types');
-            setTypes(response.data.data || []);
+            const [typesRes, accountsRes] = await Promise.all([
+                axios.get('/api/asset-types'),
+                axios.get('/api/accounting/accounts?plano=1')
+            ]);
+            setTypes(typesRes.data.data || []);
+            setAccounts(accountsRes.data.map(acc => ({
+                label: `${acc.codigo} - ${acc.nombre}`,
+                value: acc.id
+            })));
             setLoading(false);
         } catch (error) {
-            toast.current.show({ severity: 'error', summary: 'Error', detail: 'Error cargando tipos de bien' });
+            toast.current.show({ severity: 'error', summary: 'Error', detail: 'Error cargando datos' });
             setLoading(false);
         }
     };
@@ -84,7 +94,8 @@ const AssetTypes = ({ user }) => {
                 descripcion: type.descripcion || '',
                 es_depreciable: type.es_depreciable,
                 vida_util_default: type.vida_util_default,
-                cuenta_contable: type.cuenta_contable || '',
+                cuenta_gasto_depreciacion_id: type.cuenta_gasto_depreciacion_id || null,
+                cuenta_depreciacion_acumulada_id: type.cuenta_depreciacion_acumulada_id || null,
             });
         } else {
             setEditingType(null);
@@ -94,7 +105,8 @@ const AssetTypes = ({ user }) => {
                 descripcion: '',
                 es_depreciable: true,
                 vida_util_default: null,
-                cuenta_contable: '',
+                cuenta_gasto_depreciacion_id: null,
+                cuenta_depreciacion_acumulada_id: null,
             });
         }
         setDisplayTypeDialog(true);
@@ -317,8 +329,6 @@ const AssetTypes = ({ user }) => {
                     <Column header="Depreciable" body={depreciableTemplate} style={{ width: '15%' }} />
                     <Column field="vida_util_default" header="Vida Útil (años)" style={{ width: '12%' }}
                         body={(r) => r.vida_util_default ?? '-'} />
-                    <Column field="cuenta_contable" header="Cuenta Contable" style={{ width: '12%' }}
-                        body={(r) => r.cuenta_contable || '-'} />
                     <Column header="Propiedades" body={propsCountTemplate} style={{ width: '12%' }} />
                     <Column body={actionBodyTemplate} header="Acciones" style={{ width: '15%' }} />
                 </DataTable>
@@ -380,13 +390,28 @@ const AssetTypes = ({ user }) => {
                             disabled={!typeForm.es_depreciable}
                         />
                     </div>
-                    <div className="col-span-2">
-                        <label className="block text-sm font-semibold mb-2">Cuenta Contable</label>
-                        <InputText
-                            value={typeForm.cuenta_contable}
-                            onChange={(e) => setTypeForm({ ...typeForm, cuenta_contable: e.target.value })}
-                            className="w-full p-2 border border-gray-300 rounded"
-                            placeholder="Ej: 1540, 1520"
+                    <div className="col-span-1">
+                        <label className="block text-sm font-semibold mb-2 flex items-center gap-1"><i className="pi pi-book" /> Gasto por Depreciación</label>
+                        <Dropdown
+                            value={typeForm.cuenta_gasto_depreciacion_id}
+                            options={accounts}
+                            onChange={(e) => setTypeForm({ ...typeForm, cuenta_gasto_depreciacion_id: e.value })}
+                            className="w-full"
+                            placeholder="Seleccione cuenta de gasto"
+                            filter
+                            showClear
+                        />
+                    </div>
+                    <div className="col-span-1">
+                        <label className="block text-sm font-semibold mb-2 flex items-center gap-1"><i className="pi pi-book" /> Depreciación Acumulada</label>
+                        <Dropdown
+                            value={typeForm.cuenta_depreciacion_acumulada_id}
+                            options={accounts}
+                            onChange={(e) => setTypeForm({ ...typeForm, cuenta_depreciacion_acumulada_id: e.value })}
+                            className="w-full"
+                            placeholder="Seleccione cuenta acumulada"
+                            filter
+                            showClear
                         />
                     </div>
                 </div>

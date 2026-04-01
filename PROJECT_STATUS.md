@@ -1,6 +1,6 @@
 # Sistema de Gestión de Activos Fijos - Laravel + Inertia + React
 
-## Estado Actual del Proyecto (25/02/2026)
+## Estado Actual del Proyecto (31/03/2026)
 
 ### ✅ COMPLETADO
 
@@ -29,6 +29,11 @@
 - [x] Tabla `discrepancy_transitions` - Auditoría de transiciones
 - [x] Tabla `maintenance_orders` - Órdenes de mantenimiento
 - [x] Tabla `maintenance_history` - Historial de mantenimiento
+- [x] Tabla `accounting_accounts` - Catálogo jerárquico de cuentas
+- [x] Tabla `journal_entries` - Cabecera de asientos contables
+- [x] Tabla `journal_entry_lines` - Detalle (Debe/Haber)
+- [x] Modificación en `asset_types` - Llaves foráneas a cuentas contables
+- [x] Tabla `activity_log` - Migraciones de Spatie instaladas y corridas
 
 #### 3. Models y Relaciones
 - [x] AssetCategory, AssetLocation, Asset, AssetValuation, AssetDepreciation, AssetMovement, QRAccess
@@ -36,6 +41,7 @@
 - [x] InventoryCycle, InventoryCapture, InventoryDiscrepancy, DiscrepancyTransition
 - [x] MaintenanceOrder, MaintenanceHistory
 - [x] Supplier
+- [x] **Contabilidad**: AccountingAccount, JournalEntry, JournalEntryLine
 - [x] Todas las relaciones between models configuradas
 
 #### 4. Services Core
@@ -43,6 +49,7 @@
 - [x] **LinearDepreciation** - Implementación de depreciación lineal
 - [x] **QRCodeGenerator** - Generación de QR on-the-fly (sin almacenar)
 - [x] **EmployeeSyncService** - Sincronización manual de empleados desde APIs externas
+- [x] **JournalEntryService** - Motor de partida doble (Debe = Haber) y cierres.
 
 #### 5. Contratos e Interfaces
 - [x] DepreciationMethod - Interfaz para métodos de depreciación futuros
@@ -102,6 +109,14 @@
   - [x] GET `/api/reports/discrepancies` - Discrepancias
   - [x] GET `/api/reports/{type}/export?format=excel|pdf` - Exportar
 
+- [x] **Accounting Controller:**
+  - [x] GET `/api/accounting/accounts` - Listar Catálogo
+  - [x] POST/PUT/DELETE `/api/accounting/accounts` - Gestión del catálogo
+  - [x] GET `/api/accounting/journal-entries` - Listar asientos contables
+  - [x] POST `/api/accounting/journal-entries` - Crear asiento manual con balanza
+  - [x] GET `/api/accounting/journal-entries/close-history` - Auditoría de cierres
+  - [x] POST `/api/accounting/journal-entries/run-depreciation` - Ejecutar cierre mensual de activos
+
 #### Fase 3: Componentes React y Frontend
 - [x] **Layout Principal**
   - [x] Navbar con navegación
@@ -148,8 +163,15 @@
   - [x] Botones exportar (Excel, PDF)
 
 - [x] **Auditoría**
-  - [x] Log de cambios (activity_log)
+  - [x] Log de cambios (activity_log) habilitado a nivel BD
   - [x] Filtros por usuario, fecha, tipo de acción
+
+- [x] **Módulo Accounting (Nuevo)**
+  - [x] Catálogo de cuentas con jerarquía (TreeTable infinito)
+  - [x] Grid de Asientos Contables filtrables por origen
+  - [x] Creación de asiento manual (Validación UI de Cuadre: Debe=Haber)
+  - [x] Historial de Cierres de Depreciación (Cierre devengado mensual)
+  - [x] Integración en "Tipos de Bien" con Dropdowns dinámicos a Cuentas.
 
 #### Fase 4: Servicios Avanzados
 - [x] Servicio de valoración (AssetValuationService)
@@ -236,7 +258,11 @@ app/
 │   │   └── Controllers/
 │   ├── Movements/
 │   ├── Reports/
-│   └── Accounting/ (Stub para integración futura)
+│   └── Accounting/
+│       ├── Models/ (AccountingAccount, JournalEntry, JournalEntryLine)
+│       ├── Services/ (JournalEntryService)
+│       ├── Http/Controllers/ (AccountingAccountController, JournalEntryController)
+│       └── Listeners/
 ├── Providers/
 │   └── EventServiceProvider.php
 
@@ -248,6 +274,7 @@ resources/js/
 │   ├── Inventory/
 │   ├── Maintenance/
 │   ├── Reports/
+│   ├── Accounting/ (Accounts Index, JournalEntries Index y Create)
 │   └── Audit.jsx
 ├── Components/
 │   ├── Layout/

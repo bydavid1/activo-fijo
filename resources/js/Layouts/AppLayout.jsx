@@ -139,6 +139,14 @@ export default function AppLayout({ children, user }) {
             permission: 'maintenance.view'
         },
         {
+            label: 'Contabilidad',
+            icon: 'pi pi-book',
+            items: [
+                { label: 'Catálogo Cuentas', href: '/accounting/accounts' },
+                { label: 'Asientos', href: '/accounting/journal-entries' },
+            ]
+        },
+        {
             label: 'Administración',
             icon: 'pi pi-cog',
             permission: 'admin.manage_config',

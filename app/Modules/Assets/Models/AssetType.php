@@ -2,6 +2,7 @@
 
 namespace App\Modules\Assets\Models;
 
+use App\Modules\Accounting\Models\AccountingAccount;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -25,6 +26,18 @@ class AssetType extends Model
         'es_depreciable' => 'boolean',
         'vida_util_default' => 'integer',
     ];
+
+    // ── Relaciones Contables ──
+    
+    public function expenseAccount(): BelongsTo
+    {
+        return $this->belongsTo(AccountingAccount::class, 'cuenta_gasto_depreciacion_id');
+    }
+
+    public function accumulatedAccount(): BelongsTo
+    {
+        return $this->belongsTo(AccountingAccount::class, 'cuenta_depreciacion_acumulada_id');
+    }
 
     // ── Relaciones ──
 

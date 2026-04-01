@@ -3,6 +3,7 @@
 namespace App\Modules\Assets\Services;
 
 use App\Modules\Assets\Contracts\DepreciationMethod;
+use App\Modules\Assets\Events\AssetDepreciated;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Assets\Models\AssetDepreciation;
 use App\Modules\Assets\Services\Depreciation\LinearDepreciation;
@@ -122,12 +123,19 @@ class DepreciationCalculator
     {
         $depreciaciones = $this->calculateForAsset($asset);
 
+        // Limpiar previas depreciaciones de este activo según estrategia (opcional),
+        // pero AssetDepreciation::updateOrCreate lo maneja por periodo
+
+        $depreciacionesGuardadas = [];
         foreach ($depreciaciones as $data) {
-            AssetDepreciation::updateOrCreate(
+            $depreciacionesGuardadas[] = AssetDepreciation::updateOrCreate(
                 ['asset_id' => $asset->id, 'periodo' => $data['periodo']],
                 $data
-            );
+            )->toArray();
         }
+
+        // Emitir evento para el módulo contable
+        event(new AssetDepreciated($asset, $depreciacionesGuardadas));
     }
 
     /**
