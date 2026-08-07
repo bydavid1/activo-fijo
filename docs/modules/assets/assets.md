@@ -327,30 +327,37 @@ Estados calculados según tipo:
 
 ### 3.3 Calcular Depreciación
 ```
-Cuando se crea o actualiza un activo depreciable:
+Cuando se crea, actualiza o revalúa un activo depreciable, el flujo real es:
 
-DepreciationCalculator::saveDepreciation(Asset)
-  ├─ Resolver método (lineal/acelerada/unidades)
-  ├─ Resolver vida útil:
-  │  1. Explícita en activo
-  │  2. Derivada de tasa en system_settings
-  │  3. Default del tipo de bien
-  │  4. Fallback: 5 años
-  ├─ Calcular por período:
-  │  ├─ Depreciación del período
-  │  ├─ Acumulada hasta período
-  │  └─ Valor en libros
-  └─ Guardar registros en asset_depreciation
+AssetController::store()/update()/revalue()
+  ├─ Validar datos del activo
+  ├─ Persistir el activo
+  ├─ DepreciationCalculator::saveDepreciation(asset)
+  │   ├─ Resolver método (lineal/acelerada/unidades)
+  │   ├─ Resolver vida útil:
+  │   │  1. Explícita en activo
+  │   │  2. Derivada de tasa en system_settings
+  │   │  3. Default del tipo de bien
+  │   │  4. Fallback: 5 años
+  │   ├─ Determinar periodicidad (mensual/anual)
+  │   ├─ Construir la fecha de inicio usando la regla del día 15
+  │   ├─ Calcular por período: depreciación, acumulada y valor en libros
+  │   ├─ Guardar registros en asset_depreciation con año/mes/periodo
+  │   └─ Disparar AssetDepreciated
+  └─ EventServiceProvider -> CreateDepreciationJournalEntry
+      └─ Crear asiento contable si existen cuentas configuradas
 ```
 
 **Métodos de Depreciación:**
 - **Lineal:** Depreciación = (Valor - Residual) / Vida útil
 - **Acelerada:** Factor de aceleración aplicado
-- **Unidades:** Basado en unidades producidas
+- **Unidades:** Basado en unidades producidas, con distribución uniforme por defecto
 
 **Ubicación:** [app/Modules/Assets/Services/DepreciationCalculator.php](../../app/Modules/Assets/Services/DepreciationCalculator.php)
 
 **Regla del Día 15:** Si `fecha_adquisicion` es después del día 15, la depreciación comienza el primer día del mes siguiente. Controlado por `aplicar_regla_dia_15`.
+
+**Importante:** La depreciación se recalcula al crear, actualizar o revaluar un activo. La tabla [app/Modules/Assets/Models/AssetDepreciation.php](../../app/Modules/Assets/Models/AssetDepreciation.php) usa `ano`, `mes`, `periodo` y `depreciacion_valor` para alimentar cierres mensuales y reportes.
 
 ### 3.4 Revaluar Activo
 ```

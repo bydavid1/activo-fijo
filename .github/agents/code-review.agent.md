@@ -68,6 +68,7 @@ Realizar revisiones de código enfocadas en calidad, seguridad, performance y ad
    - Sugerencia de solución
    - Ejemplo de código corregido
 5. **Priorizar** fixes requeridas vs mejoras opcionales
+6. **Documentar** los findings en el archivo docs/reviews/code-review-findings.md
 
 ## Niveles de Severidad
 
