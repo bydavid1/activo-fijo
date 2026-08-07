@@ -25,13 +25,13 @@ export default function JournalEntriesCreate({ user }) {
 
     // Lines data
     const [lines, setLines] = useState([
-        { id: 1, accounting_account_id: null, debe: 0, haber: 0 },
-        { id: 2, accounting_account_id: null, debe: 0, haber: 0 }
+        { id: 1, accounting_account_id: null, debe: 0, haber: 0, concepto: '' },
+        { id: 2, accounting_account_id: null, debe: 0, haber: 0, concepto: '' }
     ]);
 
     useEffect(() => {
-        // Load operational flat accounts
-        axios.get('/api/accounting/accounts?plano=1').then(res => {
+        // Load operational flat accounts (solo operativas)
+        axios.get('/api/accounting/accounts?plano=1&solo_operativas=1').then(res => {
             setAccounts(res.data.map(acc => ({
                 label: `${acc.codigo} - ${acc.nombre}`,
                 value: acc.id
@@ -40,7 +40,7 @@ export default function JournalEntriesCreate({ user }) {
     }, []);
 
     const addLine = () => {
-        setLines([...lines, { id: Date.now(), accounting_account_id: null, debe: 0, haber: 0 }]);
+        setLines([...lines, { id: Date.now(), accounting_account_id: null, debe: 0, haber: 0, concepto: '' }]);
     };
 
     const removeLine = (id) => {
@@ -67,22 +67,28 @@ export default function JournalEntriesCreate({ user }) {
     const sumDebe = lines.reduce((sum, l) => sum + (l.debe || 0), 0);
     const sumHaber = lines.reduce((sum, l) => sum + (l.haber || 0), 0);
     const diff = Math.abs(sumDebe - sumHaber);
-    const isBalanced = sumDebe > 0 && diff < 0.01;
+    const isBalanced = sumDebe > 0 && sumHaber > 0 && diff < 0.01;
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (estadoTarget = 'borrador') => {
         if (!header.fecha || !header.descripcion.trim()) {
             toast.current.show({ severity: 'error', summary: 'Error', detail: 'Complete fecha y descripción' });
             return;
         }
 
         if (!isBalanced) {
-            toast.current.show({ severity: 'error', summary: 'Error', detail: 'El asiento no cuadra. Debe y Haber deben ser iguales.' });
+            toast.current.show({ severity: 'error', summary: 'Error', detail: 'El asiento no cuadra o falta línea al Debe/Haber.' });
             return;
         }
 
-        const emptyLines = lines.some(l => !l.accounting_account_id || (l.debe === 0 && l.haber === 0));
-        if (emptyLines) {
-            toast.current.show({ severity: 'warn', summary: 'Aviso', detail: 'Asegúrese de seleccionar cuentas y colocar importes en todas las líneas' });
+        const emptyAccount = lines.some(l => !l.accounting_account_id);
+        if (emptyAccount) {
+            toast.current.show({ severity: 'warn', summary: 'Aviso', detail: 'Todas las líneas deben tener una cuenta seleccionada' });
+            return;
+        }
+
+        const zeroLines = lines.some(l => (l.debe || 0) === 0 && (l.haber || 0) === 0);
+        if (zeroLines) {
+            toast.current.show({ severity: 'warn', summary: 'Aviso', detail: 'Una línea no puede tener ambos valores (Debe/Haber) en cero' });
             return;
         }
 
@@ -91,13 +97,15 @@ export default function JournalEntriesCreate({ user }) {
             await axios.post('/api/accounting/journal-entries', {
                 fecha: header.fecha.toISOString().split('T')[0],
                 descripcion: header.descripcion,
+                estado: estadoTarget,
                 lines: lines.map(l => ({
                     accounting_account_id: l.accounting_account_id,
-                    debe: l.debe,
-                    haber: l.haber
+                    debe: l.debe || 0,
+                    haber: l.haber || 0,
+                    concepto: l.concepto || ''
                 }))
             });
-            toast.current.show({ severity: 'success', summary: 'Éxito', detail: 'Asiento guardado correctamente' });
+            toast.current.show({ severity: 'success', summary: 'Éxito', detail: `Asiento guardado (${estadoTarget})` });
             setTimeout(() => {
                 router.visit('/accounting/journal-entries');
             }, 1000);
@@ -124,8 +132,8 @@ export default function JournalEntriesCreate({ user }) {
                         <Calendar value={header.fecha} onChange={(e) => setHeader({...header, fecha: e.value})} dateFormat="yy-mm-dd" className="w-full" showIcon />
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-1">Descripción del Asiento</label>
-                        <InputText value={header.descripcion} onChange={(e) => setHeader({...header, descripcion: e.target.value})} className="w-full" placeholder="Ej: Ajuste manual de inventario, reclasificación..." />
+                        <label className="block text-sm font-medium mb-1">Descripción General del Asiento</label>
+                        <InputText value={header.descripcion} onChange={(e) => setHeader({...header, descripcion: e.target.value})} className="w-full" placeholder="Ej: Registro de compra de mobiliario de oficina..." />
                     </div>
                 </div>
 
@@ -133,10 +141,10 @@ export default function JournalEntriesCreate({ user }) {
                     <h3 className="text-lg font-semibold mb-2 border-b pb-2">Líneas / Detalle</h3>
                     
                     {lines.map((line, index) => (
-                        <div key={line.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end mb-4 bg-gray-50 p-4 md:p-2 rounded border border-gray-100 md:border-0">
+                        <div key={line.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mb-4 bg-gray-50 p-4 md:p-3 rounded border border-gray-200">
                             <div className="hidden md:block md:col-span-1 text-center font-bold text-gray-500 pb-2">{index + 1}</div>
-                            <div className="md:col-span-5 lg:col-span-4">
-                                <label className="block text-xs text-gray-500 mb-1">Cuenta</label>
+                            <div className="md:col-span-4">
+                                <label className="block text-xs text-gray-500 mb-1">Cuenta Operativa</label>
                                 <Dropdown 
                                     value={line.accounting_account_id} 
                                     options={accounts} 
@@ -146,11 +154,20 @@ export default function JournalEntriesCreate({ user }) {
                                     placeholder="Seleccione cuenta" 
                                 />
                             </div>
-                            <div className="md:col-span-3 lg:col-span-3">
+                            <div className="md:col-span-3">
+                                <label className="block text-xs text-gray-500 mb-1">Concepto / Glosa Línea</label>
+                                <InputText 
+                                    value={line.concepto || ''} 
+                                    onChange={(e) => updateLine(line.id, 'concepto', e.target.value)} 
+                                    className="w-full" 
+                                    placeholder="Opcional..." 
+                                />
+                            </div>
+                            <div className="md:col-span-2">
                                 <label className="block text-xs text-gray-500 mb-1">Débito (Debe)</label>
                                 <InputNumber value={line.debe} onValueChange={(e) => updateLine(line.id, 'debe', e.value || 0)} mode="currency" currency="USD" locale="en-US" className="w-full" inputClassName="w-full" min={0} />
                             </div>
-                            <div className="md:col-span-3 lg:col-span-3">
+                            <div className="md:col-span-2">
                                 <label className="block text-xs text-gray-500 mb-1">Crédito (Haber)</label>
                                 <InputNumber value={line.haber} onValueChange={(e) => updateLine(line.id, 'haber', e.value || 0)} mode="currency" currency="USD" locale="en-US" className="w-full" inputClassName="w-full" min={0} />
                             </div>
@@ -173,7 +190,7 @@ export default function JournalEntriesCreate({ user }) {
                             Haber: ${sumHaber.toFixed(2)}
                         </div>
                         <div className="min-w-[150px] flex justify-end">
-                            {isBalanced && sumDebe > 0 ? (
+                            {isBalanced ? (
                                 <Badge value="CUADRADO" severity="success" size="large" />
                             ) : (
                                 <Badge value={`DESCUADRE: $${diff.toFixed(2)}`} severity="danger" size="large" />
@@ -182,12 +199,27 @@ export default function JournalEntriesCreate({ user }) {
                     </div>
                 </div>
 
-                {!isBalanced && sumDebe > 0 && (
-                    <Message severity="error" text="El asiento está descuadrado y no puede ser guardado porque Debe es diferente al Haber." className="w-full mt-4" />
+                {!isBalanced && (sumDebe > 0 || sumHaber > 0) && (
+                    <Message severity="error" text="El asiento debe estar cuadrado (Debe = Haber) y contar con al menos un importe en el Debe y uno en el Haber." className="w-full mt-4" />
                 )}
 
-                <div className="flex justify-end mt-6">
-                    <Button label="Guardar Asiento" icon="pi pi-save" onClick={handleSubmit} disabled={!isBalanced || saving} loading={saving} className="p-button-success p-button-lg" />
+                <div className="flex justify-end gap-3 mt-6">
+                    <Button 
+                        label="Guardar Borrador" 
+                        icon="pi pi-file-edit" 
+                        onClick={() => handleSubmit('borrador')} 
+                        disabled={!isBalanced || saving} 
+                        loading={saving} 
+                        className="p-button-secondary p-button-lg" 
+                    />
+                    <Button 
+                        label="Guardar y Contabilizar" 
+                        icon="pi pi-check-circle" 
+                        onClick={() => handleSubmit('contabilizado')} 
+                        disabled={!isBalanced || saving} 
+                        loading={saving} 
+                        className="p-button-success p-button-lg" 
+                    />
                 </div>
             </Card>
         </AppLayout>

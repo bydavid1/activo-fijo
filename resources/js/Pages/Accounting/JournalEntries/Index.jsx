@@ -7,7 +7,7 @@ import { Toast } from 'primereact/toast';
 import { Badge } from 'primereact/badge';
 import { Dialog } from 'primereact/dialog';
 import { InputNumber } from 'primereact/inputnumber';
-import { Tag } from 'primereact/tag';
+import { InputText } from 'primereact/inputtext';
 import { Link } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import axios from 'axios';
@@ -18,6 +18,12 @@ export default function JournalEntriesIndex({ user }) {
     const [loading, setLoading] = useState(true);
     const [selectedEntry, setSelectedEntry] = useState(null);
     const [displayDetails, setDisplayDetails] = useState(false);
+
+    // Anulación
+    const [displayVoidDialog, setDisplayVoidDialog] = useState(false);
+    const [voidingEntry, setVoidingEntry] = useState(null);
+    const [voidMotivo, setVoidMotivo] = useState('');
+    const [voiding, setVoiding] = useState(false);
 
     // Cierre Mensual
     const [displayCloseForm, setDisplayCloseForm] = useState(false);
@@ -49,21 +55,79 @@ export default function JournalEntriesIndex({ user }) {
         }
     };
 
+    const handlePost = async (entry) => {
+        try {
+            const res = await axios.post(`/api/accounting/journal-entries/${entry.id}/post`);
+            toast.current?.show({ severity: 'success', summary: 'Éxito', detail: res.data.message });
+            fetchEntries();
+        } catch (error) {
+            toast.current?.show({ severity: 'error', summary: 'Error', detail: error.response?.data?.message || 'Error al contabilizar' });
+        }
+    };
+
+    const handleVoid = async () => {
+        if (!voidingEntry) return;
+        setVoiding(true);
+        try {
+            const res = await axios.post(`/api/accounting/journal-entries/${voidingEntry.id}/void`, {
+                motivo: voidMotivo
+            });
+            toast.current?.show({ severity: 'success', summary: 'Éxito', detail: res.data.message });
+            setDisplayVoidDialog(false);
+            setVoidMotivo('');
+            fetchEntries();
+        } catch (error) {
+            toast.current?.show({ severity: 'error', summary: 'Error', detail: error.response?.data?.message || 'Error al anular' });
+        } finally {
+            setVoiding(false);
+        }
+    };
+
     const typeTemplate = (rowData) => {
         if (rowData.tipo_origen === 'depreciacion') {
             return <Badge value="Automático (Depreciación)" severity="info" />;
+        }
+        if (rowData.tipo_origen === 'anulacion') {
+            return <Badge value="Contrapartida (Anulación)" severity="danger" />;
         }
         return <Badge value="Manual" severity="warning" />;
     };
 
     const stateTemplate = (rowData) => {
-        return <Badge value={rowData.estado.toUpperCase()} severity={rowData.estado === 'validado' ? 'success' : 'danger'} />;
+        const severities = {
+            'borrador': 'warning',
+            'contabilizado': 'success',
+            'anulado': 'danger'
+        };
+        return <Badge value={rowData.estado.toUpperCase()} severity={severities[rowData.estado] || 'info'} />;
     };
 
     const actionsTemplate = (rowData) => {
         return (
-            <Button icon="pi pi-eye" className="p-button-rounded p-button-text" 
-                onClick={() => { setSelectedEntry(rowData); setDisplayDetails(true); }} tooltip="Ver Detalles" />
+            <div className="flex gap-1">
+                <Button 
+                    icon="pi pi-eye" 
+                    className="p-button-rounded p-button-text p-button-info" 
+                    onClick={() => { setSelectedEntry(rowData); setDisplayDetails(true); }} 
+                    tooltip="Ver Detalles" 
+                />
+                {rowData.estado === 'borrador' && (
+                    <Button 
+                        icon="pi pi-check-circle" 
+                        className="p-button-rounded p-button-text p-button-success" 
+                        onClick={() => handlePost(rowData)} 
+                        tooltip="Contabilizar Asiento" 
+                    />
+                )}
+                {rowData.estado === 'contabilizado' && (
+                    <Button 
+                        icon="pi pi-ban" 
+                        className="p-button-rounded p-button-text p-button-danger" 
+                        onClick={() => { setVoidingEntry(rowData); setVoidMotivo(''); setDisplayVoidDialog(true); }} 
+                        tooltip="Anular Asiento (Contrapartida)" 
+                    />
+                )}
+            </div>
         );
     };
 
@@ -92,7 +156,7 @@ export default function JournalEntriesIndex({ user }) {
             toast.current?.show({ 
                 severity: 'error', 
                 summary: 'Error', 
-                detail: 'Ocurrió un error al procesar el cierre. Revisa la consola o configuración de cuentas.' 
+                detail: error.response?.data?.message || 'Ocurrió un error al procesar el cierre.' 
             });
         } finally {
             setClosing(false);
@@ -125,30 +189,36 @@ export default function JournalEntriesIndex({ user }) {
                 </div>
 
                 <DataTable value={entries} loading={loading} paginator rows={15} stripedRows emptyMessage="No hay asientos registrados">
-                    <Column field="id" header="Nº Asiento" style={{ width: '10%' }}></Column>
-                    <Column field="fecha" header="Fecha" style={{ width: '15%' }}></Column>
+                    <Column field="numero_asiento" header="Nº Asiento" body={r => r.numero_asiento || `ASI-${r.id}`} sortable style={{ width: '15%' }}></Column>
+                    <Column field="fecha" header="Fecha" sortable style={{ width: '12%' }}></Column>
                     <Column field="descripcion" header="Descripción"></Column>
-                    <Column field="tipo_origen" header="Origen" body={typeTemplate} style={{ width: '20%' }}></Column>
-                    <Column field="estado" header="Estado" body={stateTemplate} style={{ width: '15%' }}></Column>
-                    <Column body={actionsTemplate} header="Acciones"></Column>
+                    <Column field="tipo_origen" header="Origen" body={typeTemplate} style={{ width: '18%' }}></Column>
+                    <Column field="estado" header="Estado" body={stateTemplate} style={{ width: '12%' }}></Column>
+                    <Column body={actionsTemplate} header="Acciones" style={{ width: '12%' }}></Column>
                 </DataTable>
             </Card>
 
-            <Dialog header={`Detalles Asiento #${selectedEntry?.id}`} visible={displayDetails} style={{ width: '60vw' }} onHide={() => setDisplayDetails(false)}>
+            <Dialog header={`Detalles Asiento: ${selectedEntry?.numero_asiento || '#' + selectedEntry?.id}`} visible={displayDetails} style={{ width: '65vw' }} onHide={() => setDisplayDetails(false)}>
                 {selectedEntry && (
                     <div>
-                        <div className="grid grid-cols-2 gap-4 mb-4 bg-gray-50 p-4 rounded">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4 bg-gray-50 p-4 rounded border">
+                            <div><strong>Nº Asiento:</strong> {selectedEntry.numero_asiento || `#${selectedEntry.id}`}</div>
                             <div><strong>Fecha:</strong> {selectedEntry.fecha}</div>
+                            <div><strong>Estado:</strong> {selectedEntry.estado?.toUpperCase()}</div>
                             <div><strong>Origen:</strong> {selectedEntry.tipo_origen}</div>
-                            <div className="col-span-2"><strong>Descripción:</strong> {selectedEntry.descripcion}</div>
+                            {selectedEntry.contabilizado_por && (
+                                <div><strong>Contabilizado por:</strong> {selectedEntry.contabilizado_por.name}</div>
+                            )}
+                            <div className="col-span-2 md:col-span-3"><strong>Descripción:</strong> {selectedEntry.descripcion}</div>
                             {selectedEntry.asset && (
-                                <div className="col-span-2"><strong>Activo Fijo Vinculado:</strong> {selectedEntry.asset.codigo} - {selectedEntry.asset.nombre}</div>
+                                <div className="col-span-2 md:col-span-3"><strong>Activo Fijo Vinculado:</strong> {selectedEntry.asset.codigo} - {selectedEntry.asset.nombre}</div>
                             )}
                         </div>
 
                         <DataTable value={selectedEntry.lines} stripedRows>
                             <Column field="account.codigo" header="Código CTA"></Column>
                             <Column field="account.nombre" header="Nombre CTA"></Column>
+                            <Column field="concepto" header="Concepto / Glosa"></Column>
                             <Column field="debe" header="Debe" align="right" body={r => `$${Number(r.debe).toFixed(2)}`}></Column>
                             <Column field="haber" header="Haber" align="right" body={r => `$${Number(r.haber).toFixed(2)}`}></Column>
                         </DataTable>
@@ -163,6 +233,25 @@ export default function JournalEntriesIndex({ user }) {
                         </div>
                     </div>
                 )}
+            </Dialog>
+
+            <Dialog header={`Anular Asiento ${voidingEntry?.numero_asiento}`} visible={displayVoidDialog} style={{ width: '35vw' }} onHide={() => !voiding && setDisplayVoidDialog(false)}>
+                <p className="mb-4 text-sm text-gray-600">
+                    Al anular un asiento contabilizado, el sistema generará automáticamente un asiento de contrapartida (reversión) con los montos del Debe y Haber invertidos para mantener la trazabilidad e inmutabilidad contable.
+                </p>
+                <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Motivo de Anulación</label>
+                    <InputText 
+                        value={voidMotivo} 
+                        onChange={(e) => setVoidMotivo(e.target.value)} 
+                        className="w-full" 
+                        placeholder="Ej: Error en imputación contable..." 
+                    />
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                    <Button label="Cancelar" icon="pi pi-times" onClick={() => setDisplayVoidDialog(false)} className="p-button-text" disabled={voiding} />
+                    <Button label="Anular Asiento" icon="pi pi-ban" onClick={handleVoid} loading={voiding} className="p-button-danger" />
+                </div>
             </Dialog>
 
             <Dialog header="Ejecutar Cierre de Depreciación Mensual" visible={displayCloseForm} style={{ width: '30vw' }} onHide={() => !closing && setDisplayCloseForm(false)}>

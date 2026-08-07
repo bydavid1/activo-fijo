@@ -4,6 +4,7 @@ namespace App\Modules\Assets\Models;
 
 use App\Modules\Accounting\Models\AccountingAccount;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -20,6 +21,8 @@ class AssetType extends Model
         'es_depreciable',
         'vida_util_default',
         'cuenta_contable',
+        'cuenta_gasto_depreciacion_id',
+        'cuenta_depreciacion_acumulada_id',
     ];
 
     protected $casts = [

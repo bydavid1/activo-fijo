@@ -20,7 +20,9 @@ return new class extends Migration
             $table->date('fecha_devolucion')->nullable()->after('responsable_externo');
         });
 
-        DB::statement("ALTER TABLE assets MODIFY COLUMN estado ENUM('activo','disponible','asignado','en_comodato','mantenimiento','baja','inactivo','descartado','retirado','vendido') DEFAULT 'disponible'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE assets MODIFY COLUMN estado ENUM('activo','disponible','asignado','en_comodato','mantenimiento','baja','inactivo','descartado','retirado','vendido') DEFAULT 'disponible'");
+        }
 
         Schema::table('asset_movements', function (Blueprint $table) {
             $table->string('responsable_externo')->nullable()->after('fecha_devolucion_esperada');
@@ -28,18 +30,24 @@ return new class extends Migration
             $table->date('fecha_devolucion')->nullable()->after('empresa_externa');
         });
 
-        DB::statement("ALTER TABLE asset_movements MODIFY COLUMN tipo ENUM('asignacion','traslado','reubicacion','mantenimiento','prestamo','comodato','devolucion','venta','baja','otro') DEFAULT 'traslado'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE asset_movements MODIFY COLUMN tipo ENUM('asignacion','traslado','reubicacion','mantenimiento','prestamo','comodato','devolucion','venta','baja','otro') DEFAULT 'traslado'");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE asset_movements MODIFY COLUMN tipo ENUM('traslado','reubicacion','mantenimiento','prestamo','devolucion','comodato','venta','baja','otro') DEFAULT 'traslado'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE asset_movements MODIFY COLUMN tipo ENUM('traslado','reubicacion','mantenimiento','prestamo','devolucion','comodato','venta','baja','otro') DEFAULT 'traslado'");
+        }
 
         Schema::table('asset_movements', function (Blueprint $table) {
             $table->dropColumn(['responsable_externo', 'empresa_externa', 'fecha_devolucion']);
         });
 
-        DB::statement("ALTER TABLE assets MODIFY COLUMN estado ENUM('activo','mantenimiento','inactivo','descartado','retirado','vendido') DEFAULT 'activo'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE assets MODIFY COLUMN estado ENUM('activo','mantenimiento','inactivo','descartado','retirado','vendido') DEFAULT 'activo'");
+        }
 
         Schema::table('assets', function (Blueprint $table) {
             $table->dropColumn([

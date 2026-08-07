@@ -15,11 +15,13 @@ return new class extends Migration
         });
 
         // 2. Copiar metodo_depreciacion de cada categoría a sus activos existentes
-        DB::statement('
-            UPDATE assets
-            INNER JOIN asset_categories ON assets.categoria_id = asset_categories.id
-            SET assets.metodo_depreciacion = asset_categories.metodo_depreciacion
-        ');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('
+                UPDATE assets
+                INNER JOIN asset_categories ON assets.categoria_id = asset_categories.id
+                SET assets.metodo_depreciacion = asset_categories.metodo_depreciacion
+            ');
+        }
 
         // 3. Cambiar responsable_id en assets: de users a employees
         Schema::table('assets', function (Blueprint $table) {
@@ -41,7 +43,9 @@ return new class extends Migration
 
         // 5. Cambiar enum tipo en asset_movements para incluir prestamo, devolucion, baja
         // MySQL requiere ALTER COLUMN para cambiar enum values
-        DB::statement("ALTER TABLE asset_movements MODIFY COLUMN tipo ENUM('traslado','reubicacion','mantenimiento','prestamo','devolucion','baja','otro') DEFAULT 'traslado'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE asset_movements MODIFY COLUMN tipo ENUM('traslado','reubicacion','mantenimiento','prestamo','devolucion','baja','otro') DEFAULT 'traslado'");
+        }
 
         // 6. Agregar fecha_devolucion_esperada a asset_movements
         Schema::table('asset_movements', function (Blueprint $table) {

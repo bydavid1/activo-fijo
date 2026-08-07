@@ -10,8 +10,9 @@ return new class extends Migration
     public function up(): void
     {
         // ═══════════ EXPANDIR tipo_adquisicion EN assets ═══════════
-        // MySQL requiere ALTER COLUMN para cambiar enum values
-        DB::statement("ALTER TABLE assets MODIFY COLUMN tipo_adquisicion ENUM('compra','donacion','transferencia','comodato','leasing','dacion_en_pago','proyecto') DEFAULT 'compra'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE assets MODIFY COLUMN tipo_adquisicion ENUM('compra','donacion','transferencia','comodato','leasing','dacion_en_pago','proyecto') DEFAULT 'compra'");
+        }
 
         // Agregar columnas para dación en pago y proyecto
         Schema::table('assets', function (Blueprint $table) {
@@ -21,7 +22,9 @@ return new class extends Migration
         });
 
         // ═══════════ EXPANDIR periodicidad_depreciacion EN assets ═══════════
-        DB::statement("ALTER TABLE assets MODIFY COLUMN periodicidad_depreciacion ENUM('diaria','mensual','anual') DEFAULT 'mensual'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE assets MODIFY COLUMN periodicidad_depreciacion ENUM('diaria','mensual','anual') DEFAULT 'mensual'");
+        }
 
         // ═══════════ AGREGAR campos de baja a asset_movements ═══════════
         Schema::table('asset_movements', function (Blueprint $table) {
@@ -43,7 +46,9 @@ return new class extends Migration
             $table->dropColumn(['proyecto_nombre', 'dacion_acreedor', 'dacion_deuda_original']);
         });
 
-        DB::statement("ALTER TABLE assets MODIFY COLUMN tipo_adquisicion ENUM('compra','donacion','transferencia','comodato','leasing') DEFAULT 'compra'");
-        DB::statement("ALTER TABLE assets MODIFY COLUMN periodicidad_depreciacion ENUM('mensual','anual') DEFAULT 'mensual'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE assets MODIFY COLUMN tipo_adquisicion ENUM('compra','donacion','transferencia','comodato','leasing') DEFAULT 'compra'");
+            DB::statement("ALTER TABLE assets MODIFY COLUMN periodicidad_depreciacion ENUM('mensual','anual') DEFAULT 'mensual'");
+        }
     }
 };

@@ -4,6 +4,7 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
+import { Checkbox } from 'primereact/checkbox';
 import { TreeTable } from 'primereact/treetable';
 import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
@@ -27,7 +28,8 @@ export default function AccountingAccountsIndex({ user }) {
         codigo: '',
         nombre: '',
         tipo: 'activo',
-        estado: 'activo'
+        estado: 'activo',
+        permite_movimientos: true
     });
 
     const accountTypes = [
@@ -75,7 +77,8 @@ export default function AccountingAccountsIndex({ user }) {
                 codigo: account.codigo,
                 nombre: account.nombre,
                 tipo: account.tipo,
-                estado: account.estado
+                estado: account.estado,
+                permite_movimientos: account.permite_movimientos ?? true
             });
         } else {
             setEditingAccount(null);
@@ -84,7 +87,8 @@ export default function AccountingAccountsIndex({ user }) {
                 codigo: '',
                 nombre: '',
                 tipo: parentId ? flatAccounts.find(a => a.value === parentId)?.tipo || 'activo' : 'activo',
-                estado: 'activo'
+                estado: 'activo',
+                permite_movimientos: true
             });
         }
         setDisplayDialog(true);
@@ -139,6 +143,14 @@ export default function AccountingAccountsIndex({ user }) {
         return <Badge value={node.data.estado} severity={node.data.estado === 'activo' ? 'success' : 'danger'} />;
     };
 
+    const movementsTemplate = (node) => {
+        return node.data.permite_movimientos ? (
+            <Badge value="Operativa" severity="success" />
+        ) : (
+            <Badge value="Agrupadora" severity="warning" />
+        );
+    };
+
     return (
         <AppLayout user={user}>
             <Toast ref={toast} />
@@ -152,6 +164,7 @@ export default function AccountingAccountsIndex({ user }) {
                     <Column field="codigo" header="Código" expander sortable></Column>
                     <Column field="nombre" header="Nombre"></Column>
                     <Column field="tipo" header="Tipo" body={typeTemplate}></Column>
+                    <Column field="permite_movimientos" header="Uso" body={movementsTemplate}></Column>
                     <Column field="estado" header="Estado" body={statusTemplate}></Column>
                     <Column body={actionTemplate} header="Acciones"></Column>
                 </TreeTable>
@@ -191,6 +204,16 @@ export default function AccountingAccountsIndex({ user }) {
                     <div>
                         <label className="block text-sm font-medium mb-1">Estado</label>
                         <Dropdown value={form.estado} options={statusOptions} onChange={(e) => setForm({...form, estado: e.value})} className="w-full" />
+                    </div>
+                    <div className="md:col-span-2 flex items-center gap-2 mt-2">
+                        <Checkbox 
+                            inputId="permite_movimientos" 
+                            checked={form.permite_movimientos} 
+                            onChange={e => setForm({...form, permite_movimientos: e.checked})} 
+                        />
+                        <label htmlFor="permite_movimientos" className="text-sm font-medium cursor-pointer">
+                            Permite movimientos directos (Cuenta Operativa / Imputable)
+                        </label>
                     </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-6">

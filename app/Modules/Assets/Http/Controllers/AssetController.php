@@ -361,6 +361,13 @@ class AssetController extends Controller
                 );
             }
 
+            // Recalcular depreciación si el activo es depreciable.
+            // Esto garantiza que cambios en valor, vida útil o periodicidad se reflejen
+            // también en el historial de depreciación y en los cierres contables.
+            if ((bool) ($asset->fresh()->depreciable ?? true)) {
+                $this->depreciationCalculator->saveDepreciation($asset->fresh());
+            }
+
             return response()->json(['mensaje' => 'Activo actualizado exitosamente', 'activo' => $asset->load('customValues.property')]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al actualizar activo: ' . $e->getMessage()], 500);

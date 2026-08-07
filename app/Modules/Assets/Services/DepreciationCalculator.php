@@ -79,34 +79,54 @@ class DepreciationCalculator
     }
 
     /**
-     * Calcular depreciación para un activo
+     * Calcular depreciación para un activo.
+     *
+     * El registro se genera según la periodicidad del activo: mensual o anual.
+     * Cada fila se marca con el año y mes de referencia para que el cierre mensual
+     * y el procesamiento contable puedan localizarla correctamente.
      */
     public function calculateForAsset(Asset $asset): array
     {
-        // Resolver método automáticamente desde el activo
+        if (!$asset->depreciable) {
+            return [];
+        }
+
         $method = $this->resolveMethod($asset);
 
         $vidaUtil = $this->resolveVidaUtil($asset);
-        $valorCompra = $asset->valor_compra;
-        $valorResidual = $asset->valor_residual ?? 0;
+        $valorCompra = (float) $asset->valor_compra;
+        $valorResidual = (float) ($asset->valor_residual ?? 0);
+        $periodicidad = $asset->periodicidad_depreciacion ?? 'mensual';
+        $fechaInicio = $asset->calcularFechaInicioDepreciacion();
+        $periodos = $periodicidad === 'anual' ? $vidaUtil : $vidaUtil * 12;
 
-        $depreciacionAcumulada = 0;
+        $depreciacionAcumulada = 0.0;
         $valorEnLibros = $valorCompra;
         $depreciaciones = [];
 
-        for ($periodo = 1; $periodo <= $vidaUtil; $periodo++) {
-            $depreciacionPeriodo = $method->calculate($valorCompra, $valorResidual, $vidaUtil, $periodo);
+        for ($periodo = 1; $periodo <= $periodos; $periodo++) {
+            $depreciacionBase = $method->calculate($valorCompra, $valorResidual, $vidaUtil, $periodo);
+            $depreciacionPeriodo = $periodicidad === 'anual'
+                ? round($depreciacionBase, 2)
+                : round($depreciacionBase / 12, 2);
+
             $depreciacionAcumulada += $depreciacionPeriodo;
             $valorEnLibros = $valorCompra - $depreciacionAcumulada;
 
-            // Asegurar que no sea menor que el valor residual
             if ($valorEnLibros < $valorResidual) {
                 $valorEnLibros = $valorResidual;
                 $depreciacionAcumulada = $valorCompra - $valorResidual;
             }
 
+            $periodDate = $periodicidad === 'anual'
+                ? $fechaInicio->copy()->addYears($periodo - 1)
+                : $fechaInicio->copy()->addMonths($periodo - 1);
+
             $depreciaciones[$periodo] = [
                 'periodo' => $periodo,
+                'ano' => (int) $periodDate->year,
+                'mes' => (int) $periodDate->month,
+                'tipo_depreciacion' => AssetDepreciation::TIPO_FINANCIERA,
                 'depreciacion_valor' => round($depreciacionPeriodo, 2),
                 'depreciacion_acumulada' => round($depreciacionAcumulada, 2),
                 'valor_en_libros' => round($valorEnLibros, 2),

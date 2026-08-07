@@ -10,8 +10,9 @@ return new class extends Migration
     {
         // ═══════════════════════════════════════════════════════════════════
         // 0. ACTUALIZAR ENUM DE ESTADO PARA INCLUIR 'vendido'
-        // ═══════════════════════════════════════════════════════════════════
-        \DB::statement("ALTER TABLE assets MODIFY COLUMN estado ENUM('activo', 'mantenimiento', 'inactivo', 'descartado', 'retirado', 'vendido') DEFAULT 'activo'");
+        if (\DB::getDriverName() === 'mysql') {
+            \DB::statement("ALTER TABLE assets MODIFY COLUMN estado ENUM('activo', 'mantenimiento', 'inactivo', 'descartado', 'retirado', 'vendido') DEFAULT 'activo'");
+        }
 
         // ═══════════════════════════════════════════════════════════════════
         // 1. CAMPOS ADICIONALES EN ASSETS (tipo adquisición, documentos, depreciación)
@@ -44,7 +45,9 @@ return new class extends Migration
         // 2. CAMPOS ADICIONALES EN MOVIMIENTOS (ventas y subastas)
         // ═══════════════════════════════════════════════════════════════════
         // Actualizar enum de tipo para incluir venta y baja
-        \DB::statement("ALTER TABLE asset_movements MODIFY COLUMN tipo ENUM('traslado', 'reubicacion', 'mantenimiento', 'prestamo', 'devolucion', 'venta', 'baja', 'otro') DEFAULT 'traslado'");
+        if (\DB::getDriverName() === 'mysql') {
+            \DB::statement("ALTER TABLE asset_movements MODIFY COLUMN tipo ENUM('traslado', 'reubicacion', 'mantenimiento', 'prestamo', 'devolucion', 'venta', 'baja', 'otro') DEFAULT 'traslado'");
+        }
 
         Schema::table('asset_movements', function (Blueprint $table) {
 
