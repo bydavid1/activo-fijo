@@ -11,7 +11,8 @@ class JournalEntryLine extends Model
         'journal_entry_id',
         'accounting_account_id',
         'debe',
-        'haber'
+        'haber',
+        'concepto',
     ];
 
     protected $casts = [

@@ -41,6 +41,9 @@ class EventServiceProvider extends ServiceProvider
         AssetDisposed::class => [
             // Listeners para disposición
         ],
+        AssetDepreciated::class => [
+            CreateDepreciationJournalEntry::class,
+        ],
 
         // Inventory
         DiscrepancyDetected::class => [

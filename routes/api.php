@@ -197,5 +197,7 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/journal-entries/run-depreciation', [JournalEntryController::class, 'runMonthlyDepreciation']);
         Route::get('/journal-entries/close-history', [JournalEntryController::class, 'closeHistory']);
         Route::get('/journal-entries/{entry}', [JournalEntryController::class, 'apiShow']);
+        Route::post('/journal-entries/{entry}/post', [JournalEntryController::class, 'post']);
+        Route::post('/journal-entries/{entry}/void', [JournalEntryController::class, 'void']);
     });
 }); // Cierre del middleware auth:web

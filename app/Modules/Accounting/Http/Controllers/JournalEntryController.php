@@ -36,7 +36,6 @@ class JournalEntryController extends Controller
 
     public function show(JournalEntry $entry)
     {
-        // View not strictly required for MVP, but good for linking
         return Inertia::render('Accounting/JournalEntries/Show', [
             'entryId' => $entry->id
         ]);
@@ -47,10 +46,14 @@ class JournalEntryController extends Controller
      */
     public function apiIndex(Request $request)
     {
-        $query = JournalEntry::with(['lines.account', 'asset'])->latest('fecha');
+        $query = JournalEntry::with(['lines.account', 'asset', 'contabilizadoPor', 'anuladoPor'])->latest('fecha');
 
         if ($request->filled('tipo_origen')) {
             $query->where('tipo_origen', $request->tipo_origen);
+        }
+
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
         }
 
         if ($request->filled('fecha_desde')) {
@@ -59,6 +62,12 @@ class JournalEntryController extends Controller
 
         if ($request->filled('fecha_hasta')) {
             $query->whereDate('fecha', '<=', $request->fecha_hasta);
+        }
+
+        if ($request->filled('cuenta_id')) {
+            $query->whereHas('lines', function ($q) use ($request) {
+                $q->where('accounting_account_id', $request->cuenta_id);
+            });
         }
         
         if ($request->filled('asset_id')) {
@@ -73,7 +82,7 @@ class JournalEntryController extends Controller
      */
     public function apiShow(JournalEntry $entry)
     {
-        return response()->json($entry->load(['lines.account', 'asset']));
+        return response()->json($entry->load(['lines.account', 'asset', 'contabilizadoPor', 'anuladoPor']));
     }
 
     /**
@@ -85,10 +94,12 @@ class JournalEntryController extends Controller
             'fecha' => 'required|date',
             'descripcion' => 'required|string|max:255',
             'asset_id' => 'nullable|exists:assets,id',
+            'estado' => 'nullable|in:borrador,contabilizado',
             'lines' => 'required|array|min:2',
             'lines.*.accounting_account_id' => 'required|exists:accounting_accounts,id',
             'lines.*.debe' => 'required|numeric|min:0',
             'lines.*.haber' => 'required|numeric|min:0',
+            'lines.*.concepto' => 'nullable|string|max:255',
         ]);
 
         try {
@@ -98,18 +109,58 @@ class JournalEntryController extends Controller
                     'descripcion' => $validated['descripcion'],
                     'asset_id' => $validated['asset_id'] ?? null,
                     'tipo_origen' => 'manual',
-                    'estado' => 'validado'
+                    'estado' => $validated['estado'] ?? 'borrador',
                 ],
                 $validated['lines']
             );
 
             return response()->json([
-                'message' => 'Asiento contable creado exitosamente',
+                'message' => 'Asiento contable registrado exitosamente',
                 'entry' => $entry->load('lines.account'),
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al crear el asiento contable: ' . $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * API - Contabilizar asiento en borrador
+     */
+    public function post(JournalEntry $entry)
+    {
+        try {
+            $postedEntry = $this->service->postEntry($entry, auth()->id());
+            return response()->json([
+                'message' => "Asiento {$postedEntry->numero_asiento} contabilizado exitosamente",
+                'entry' => $postedEntry->load('lines.account'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * API - Anular asiento contabilizado
+     */
+    public function void(Request $request, JournalEntry $entry)
+    {
+        $request->validate([
+            'motivo' => 'nullable|string|max:255',
+        ]);
+
+        try {
+            $reversalEntry = $this->service->voidEntry($entry, $request->motivo ?? 'Anulación de asiento', auth()->id());
+            return response()->json([
+                'message' => "Asiento anulación registrado exitosamente ({$reversalEntry->numero_asiento})",
+                'entry' => $reversalEntry->load('lines.account'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
             ], 422);
         }
     }
@@ -180,7 +231,7 @@ class JournalEntryController extends Controller
                         'descripcion' => "Depreciación de periodo [{$month}/{$year}] - {$asset->codigo} - {$asset->nombre}",
                         'asset_id' => $asset->id,
                         'tipo_origen' => 'depreciacion',
-                        'estado' => 'validado'
+                        'estado' => 'contabilizado'
                     ],
                     [
                         [

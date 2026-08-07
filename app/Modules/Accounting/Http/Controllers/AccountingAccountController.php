@@ -24,15 +24,19 @@ class AccountingAccountController extends Controller
     {
         $query = AccountingAccount::with('parent')->orderBy('codigo');
 
-        if ($request->has('tipo') && $request->tipo) {
+        if ($request->filled('tipo')) {
             $query->where('tipo', $request->tipo);
+        }
+
+        if ($request->boolean('solo_operativas') || $request->boolean('permite_movimientos')) {
+            $query->where('permite_movimientos', true)->where('estado', 'activo');
         }
 
         if ($request->has('plano')) {
             return response()->json($query->get());
         }
 
-        // Si es jerárquico (para un TreeTable), filtramos solo padres de nivel 1
+        // Si es jerárquico (para un TreeTable), construimos el árbol
         $cuentas = $query->get();
         return response()->json($this->buildTree($cuentas));
     }
@@ -56,6 +60,7 @@ class AccountingAccountController extends Controller
                         'tipo' => $element->tipo,
                         'estado' => $element->estado,
                         'nivel' => $element->nivel,
+                        'permite_movimientos' => (bool) $element->permite_movimientos,
                     ]
                 ];
 
@@ -81,6 +86,7 @@ class AccountingAccountController extends Controller
             'nombre' => 'required|string|max:255',
             'tipo' => 'required|in:activo,pasivo,patrimonio,ingreso,gasto',
             'estado' => 'required|in:activo,inactivo',
+            'permite_movimientos' => 'nullable|boolean',
         ]);
 
         $nivel = 1;
@@ -89,9 +95,15 @@ class AccountingAccountController extends Controller
             $nivel = $parent->nivel + 1;
             // Asegurarnos que una subcuenta tenga el mismo tipo que la cuenta principal
             $validated['tipo'] = $parent->tipo;
+
+            // Al crear una subcuenta, la cuenta padre pasa a ser agrupadora (permite_movimientos = false)
+            if ($parent->permite_movimientos) {
+                $parent->update(['permite_movimientos' => false]);
+            }
         }
 
         $validated['nivel'] = $nivel;
+        $validated['permite_movimientos'] = $validated['permite_movimientos'] ?? true;
 
         $account = AccountingAccount::create($validated);
 
@@ -111,15 +123,27 @@ class AccountingAccountController extends Controller
             'codigo' => 'required|string|unique:accounting_accounts,codigo,' . $account->id,
             'nombre' => 'required|string|max:255',
             'estado' => 'required|in:activo,inactivo',
+            'permite_movimientos' => 'nullable|boolean',
         ]);
 
         if ($request->parent_id && $request->parent_id !== $account->parent_id) {
             if ($request->parent_id == $account->id) {
-               return response()->json(['message' => 'Una cuenta no puede ser recursiva a sí misma'], 422);
+                return response()->json(['message' => 'Una cuenta no puede ser recursiva a sí misma'], 422);
             }
             $parent = AccountingAccount::find($request->parent_id);
             $account->nivel = $parent->nivel + 1;
             $account->tipo = $parent->tipo;
+
+            if ($parent->permite_movimientos) {
+                $parent->update(['permite_movimientos' => false]);
+            }
+        }
+
+        // Si la cuenta tiene subcuentas, NO debe permitir movimientos directamente
+        if ($account->children()->count() > 0 && ($request->permite_movimientos ?? false)) {
+            return response()->json([
+                'message' => 'Una cuenta agrupadora con subcuentas no puede ser configurada para permitir movimientos directamente.'
+            ], 422);
         }
 
         $account->update($validated);

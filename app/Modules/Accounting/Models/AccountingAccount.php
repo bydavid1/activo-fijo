@@ -17,7 +17,12 @@ class AccountingAccount extends Model
         'nombre',
         'tipo',
         'estado',
-        'nivel'
+        'nivel',
+        'permite_movimientos',
+    ];
+
+    protected $casts = [
+        'permite_movimientos' => 'boolean',
     ];
 
     public function parent(): BelongsTo
